@@ -65,10 +65,41 @@
   - [4. CI/CD 파이프라인을 통한 자동화 배포](#4-cicd-파이프라인을-통한-자동화-배포)
     - [**설명**](#설명-3)
     - [**구현 방법**](#구현-방법-3)
+- [CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포](#cicd-파이프라인을-통한-react-프로젝트-자동화-배포)
+  - [**1. CI와 CD의 의미**](#1-ci와-cd의-의미)
+    - [**1.1 CI (Continuous Integration)**](#11-ci-continuous-integration)
+    - [**1.2 CD (Continuous Deployment)**](#12-cd-continuous-deployment)
+  - [**2. AWS에서 사용되는 서비스와 설명**](#2-aws에서-사용되는-서비스와-설명)
+    - [**2.1 AWS CodePipeline**](#21-aws-codepipeline)
+    - [**2.2 AWS CodeBuild**](#22-aws-codebuild)
+    - [**2.3 AWS S3**](#23-aws-s3)
+    - [**2.4 AWS CloudFront**](#24-aws-cloudfront)
+    - [**2.5 AWS IAM (Identity and Access Management)**](#25-aws-iam-identity-and-access-management)
+  - [**3. CI/CD 파이프라인 설정 순서**](#3-cicd-파이프라인-설정-순서)
+    - [**3.1 S3 버킷 생성 및 설정**](#31-s3-버킷-생성-및-설정)
+    - [**3.2 IAM 역할 생성**](#32-iam-역할-생성)
+    - [**3.3 CodeBuild 프로젝트 생성**](#33-codebuild-프로젝트-생성)
+    - [**3.4 CloudFront 배포 설정**](#34-cloudfront-배포-설정)
+    - [**3.5 CodePipeline 생성**](#35-codepipeline-생성)
+  - [**4. `buildspec.yml` 작성 방법**](#4-buildspecyml-작성-방법)
+    - [**4.1 파일 내용**](#41-파일-내용)
+    - [**4.2 옵션 설명**](#42-옵션-설명)
+  - [**5. 결과 확인**](#5-결과-확인)
   - [5. A/B 테스트 배포](#5-ab-테스트-배포)
     - [**설명**](#설명-4)
     - [**구현 방법**](#구현-방법-4)
-  - [학습 및 실습을 위한 준비 사항](#학습-및-실습을-위한-준비-사항)
+- [A/B 테스트 배포 설정](#ab-테스트-배포-설정)
+  - [**1. A/B 테스트를 위한 AWS 리소스**](#1-ab-테스트를-위한-aws-리소스)
+    - [**1.1 AWS S3**](#11-aws-s3)
+    - [**1.2 AWS CloudFront**](#12-aws-cloudfront)
+    - [**1.3 AWS Lambda@Edge**](#13-aws-lambdaedge)
+    - [**1.4 AWS CodePipeline**](#14-aws-codepipeline)
+  - [**2. 설정 순서**](#2-설정-순서-1)
+    - [**2.1 S3 버킷 생성 및 파일 업로드**](#21-s3-버킷-생성-및-파일-업로드)
+    - [**2.2 CloudFront 설정**](#22-cloudfront-설정)
+    - [**2.3 Lambda@Edge 생성 및 연결**](#23-lambdaedge-생성-및-연결)
+    - [**2.4 CodePipeline 설정**](#24-codepipeline-설정)
+  - [**3. 결과 확인**](#3-결과-확인)
 
 
 ## 1. CDN 배포 (Content Delivery Network Deployment)
@@ -732,6 +763,159 @@ CI/CD 파이프라인은 코드 변경 사항을 자동으로 통합, 테스트,
 2. **빌드 실패/성공 알림**: AWS SNS를 사용하여 개발자에게 알림 전송.
 3. **환경별 파이프라인 구성**: 개발, 스테이징, 프로덕션 환경으로 구분.
 
+# CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포
+
+CI/CD 파이프라인을 통해 React 프로젝트를 자동으로 빌드, 테스트, 배포하는 환경을 AWS에서 설정합니다. 이를 위해 사용되는 AWS 서비스와 설정 절차를 자세히 설명하고, 자동화 배포를 위한 `buildspec.yml` 작성 방법을 포함합니다.
+
+---
+
+## **1. CI와 CD의 의미**
+
+### **1.1 CI (Continuous Integration)**
+- **의미**: 지속적인 통합. 개발자들이 작성한 코드를 주기적으로 통합하여, 충돌을 조기에 발견하고 해결하는 프로세스.
+- **특징**:
+  - 코드 변경 사항을 자동으로 빌드하고 테스트.
+  - 팀 간 협업을 원활하게 하고 코드 품질을 유지.
+
+### **1.2 CD (Continuous Deployment)**
+- **의미**: 지속적인 배포. CI 단계에서 성공적으로 빌드된 코드를 자동으로 배포하여 사용자에게 제공하는 프로세스.
+- **특징**:
+  - 릴리스 과정을 자동화하여 시간 절약.
+  - 안정성과 신속성을 강화.
+
+---
+
+## **2. AWS에서 사용되는 서비스와 설명**
+
+### **2.1 AWS CodePipeline**
+- **역할**: 전체 CI/CD 파이프라인을 관리.
+- **특징**:
+  - 단계별 워크플로를 정의하여 소스 변경 사항을 자동으로 배포.
+
+### **2.2 AWS CodeBuild**
+- **역할**: 소스 코드를 빌드하고 테스트 실행.
+- **특징**:
+  - 다양한 런타임 환경 지원 (Node.js, Python 등).
+  - 빌드 아티팩트를 생성하여 S3 또는 배포 단계로 전달.
+
+### **2.3 AWS S3**
+- **역할**: React 빌드 결과물을 저장하고, 정적 파일을 호스팅.
+- **특징**:
+  - 글로벌 스케일에서 정적 파일 호스팅 가능.
+  - CodePipeline과 통합하여 빌드 결과를 저장.
+
+### **2.4 AWS CloudFront**
+- **역할**: S3에서 제공되는 정적 파일을 CDN을 통해 전 세계로 빠르게 전달.
+- **특징**:
+  - HTTPS를 기본 지원하여 보안 강화.
+  - 캐싱을 통해 성능 최적화.
+
+### **2.5 AWS IAM (Identity and Access Management)**
+- **역할**: AWS 리소스 접근을 제어.
+- **특징**:
+  - CodePipeline, CodeBuild, S3 간 권한을 설정.
+
+---
+
+## **3. CI/CD 파이프라인 설정 순서**
+
+### **3.1 S3 버킷 생성 및 설정**
+1. AWS 콘솔 → **S3** → **Create Bucket**:
+   - 버킷 이름: `react-project-artifacts` (빌드 결과 저장용).
+   - 퍼블릭 액세스 비활성화.
+
+2. **정적 웹 호스팅 활성화**:
+   - S3 버킷 → **Properties** → **Static Website Hosting**.
+   - Index Document: `index.html`.
+
+### **3.2 IAM 역할 생성**
+1. AWS 콘솔 → **IAM** → **Roles** → **Create Role**:
+   - 서비스: **CodePipeline** 선택.
+   - 정책 연결:
+     - **AmazonS3FullAccess**.
+     - **AWSCodeBuildAdminAccess**.
+
+2. 동일한 방식으로 **CodeBuild** 전용 역할 생성.
+
+### **3.3 CodeBuild 프로젝트 생성**
+1. AWS 콘솔 → **CodeBuild** → **Create Build Project**:
+   - **Source**: CodePipeline (Source를 직접 받음).
+   - **Environment**:
+     - 런타임: **Node.js**.
+     - 운영 체제: Amazon Linux 2.
+     - 권한: 생성한 CodeBuild IAM 역할.
+   - **Buildspec**:
+     - `buildspec.yml` 파일 사용.
+
+### **3.4 CloudFront 배포 설정**
+1. AWS 콘솔 → **CloudFront** → **Create Distribution**:
+   - Origin: S3 버킷(`react-project-artifacts`).
+   - Default Cache Behavior:
+     - Viewer Protocol Policy: Redirect HTTP to HTTPS.
+   - 배포 완료 후 URL 확인.
+
+### **3.5 CodePipeline 생성**
+1. AWS 콘솔 → **CodePipeline** → **Create Pipeline**:
+   - **Source**: GitHub 또는 CodeCommit.
+   - **Build**: CodeBuild 프로젝트 연결.
+   - **Deploy**: S3 버킷에 React 빌드 결과 저장.
+
+---
+
+## **4. `buildspec.yml` 작성 방법**
+
+### **4.1 파일 내용**
+```yaml
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - echo "Installing dependencies..."
+      - npm install
+  build:
+    commands:
+      - echo "Building the project..."
+      - npm run build
+  post_build:
+    commands:
+      - echo "Syncing build output to S3..."
+      - aws s3 sync ./build s3://react-project-artifacts --delete
+artifacts:
+  files:
+    - '**/*'
+cache:
+  paths:
+    - node_modules/**/*
+```
+
+### **4.2 옵션 설명**
+1. **`version`**:
+   - Buildspec 파일의 형식 버전을 나타냄.
+
+2. **`phases`**:
+   - **`install`**: 빌드에 필요한 환경과 의존성 설치.
+   - **`build`**: React 애플리케이션 빌드 실행.
+   - **`post_build`**: 빌드 후 결과를 S3에 동기화.
+
+3. **`artifacts`**:
+   - 생성된 빌드 결과를 파이프라인에서 사용할 수 있도록 설정.
+
+4. **`cache`**:
+   - 의존성을 캐싱하여 빌드 속도를 최적화.
+
+---
+
+## **5. 결과 확인**
+1. **S3 및 CloudFront URL 확인**:
+   - CloudFront 도메인에서 애플리케이션 배포 확인.
+2. **CodePipeline 자동화 테스트**:
+   - GitHub에서 소스 변경 후 CodePipeline이 실행되는지 확인.
+
+이 설정을 통해 React 프로젝트의 빌드, 테스트, 배포를 완전 자동화할 수 있습니다. 추가 질문이 있다면 알려주세요!
+
 ---
 
 ## 5. A/B 테스트 배포
@@ -750,14 +934,145 @@ A/B 테스트 배포는 사용자 그룹을 나누어 서로 다른 애플리케
 4. **결과 분석**:
    - AWS CloudWatch 또는 다른 분석 도구를 통해 사용자 피드백 및 성과를 수집.
 
+# A/B 테스트 배포 설정
+
+A/B 테스트 배포는 두 가지 버전(A와 B)의 애플리케이션을 서로 다른 사용자 그룹에 배포하여 성능, 안정성, 사용자 경험을 비교하는 방식입니다. AWS에서 이를 설정하기 위해 **CloudFront**, **S3**, **Lambda@Edge**를 활용하며, **CodePipeline**을 통해 자동화 배포도 설정할 수 있습니다.
+
 ---
 
-## 학습 및 실습을 위한 준비 사항
-1. **AWS 계정 생성**:
-   - IAM 사용자를 만들고 권한 설정.
-2. **필수 도구 설치**:
-   - AWS CLI, Node.js, 프론트엔드 프레임워크(React/Vue/Angular).
-3. **소규모 애플리케이션 설계**:
-   - 정적 파일 기반의 간단한 SPA 또는 기본 서버 기반 애플리케이션.
+## **1. A/B 테스트를 위한 AWS 리소스**
 
-각 전략을 단계적으로 실습하면서 AWS의 다양한 서비스를 익힐 수 있습니다.
+### **1.1 AWS S3**
+- **역할**: 정적 파일을 호스팅하며 두 가지 버전(A와 B)을 각각 저장.
+- **설정**:
+  1. S3 버킷 2개 생성:
+     - `frontend-a`: A 버전을 저장.
+     - `frontend-b`: B 버전을 저장.
+  2. 각 버킷에 React 빌드 파일 업로드.
+
+### **1.2 AWS CloudFront**
+- **역할**: 사용자 요청을 A 또는 B 버전의 S3로 라우팅.
+- **설정**:
+  1. CloudFront 배포 생성:
+     - **Origin**: 두 개의 S3 버킷(`frontend-a`, `frontend-b`) 추가.
+     - **Default Behavior**: Lambda@Edge를 연결하여 요청 분기 처리.
+
+### **1.3 AWS Lambda@Edge**
+- **역할**: CloudFront 요청을 처리하며, A/B 버전의 리소스를 반환.
+- **설정**:
+  1. Lambda 함수 생성:
+     - **언어**: Node.js.
+     - **로직**: 쿠키 또는 헤더 기반으로 요청 분기 처리.
+     - 예제:
+       ```javascript
+       exports.handler = async (event) => {
+           const request = event.Records[0].cf.request;
+           const headers = request.headers;
+
+           // 쿠키 기반 A/B 테스트
+           if (headers.cookie && headers.cookie[0].value.includes("version=B")) {
+               request.origin.s3.domainName = "frontend-b.s3.amazonaws.com";
+           } else {
+               request.origin.s3.domainName = "frontend-a.s3.amazonaws.com";
+           }
+
+           return request;
+       };
+       ```
+  2. Lambda 함수 배포:
+     - Lambda@Edge로 배포하여 CloudFront에 연결.
+
+### **1.4 AWS CodePipeline**
+- **역할**: 소스 코드 변경 시 A와 B 버전의 S3로 자동 배포.
+
+---
+
+## **2. 설정 순서**
+
+### **2.1 S3 버킷 생성 및 파일 업로드**
+1. AWS 콘솔에서 **S3**로 이동 → **Create Bucket** 클릭:
+   - 버킷 이름: `frontend-a` (A 버전 저장).
+   - 버킷 이름: `frontend-b` (B 버전 저장).
+
+2. 로컬에서 React 프로젝트 빌드:
+   ```bash
+   npm run build
+   ```
+3. 빌드 결과를 S3에 업로드:
+   ```bash
+   aws s3 sync ./build s3://frontend-a
+   aws s3 sync ./build s3://frontend-b
+   ```
+
+### **2.2 CloudFront 설정**
+1. AWS 콘솔에서 **CloudFront**로 이동 → **Create Distribution** 클릭.
+2. **Origin**:
+   - Origin 1: `frontend-a.s3.amazonaws.com`.
+   - Origin 2: `frontend-b.s3.amazonaws.com`.
+3. **Default Behavior**:
+   - Viewer Protocol Policy: Redirect HTTP to HTTPS.
+   - Add Lambda Function: Lambda@Edge를 요청 처리에 추가.
+
+### **2.3 Lambda@Edge 생성 및 연결**
+1. Lambda 함수 작성:
+   ```javascript
+   exports.handler = async (event) => {
+       const request = event.Records[0].cf.request;
+       const headers = request.headers;
+
+       // 쿠키 기반 A/B 테스트
+       if (headers.cookie && headers.cookie[0].value.includes("version=B")) {
+           request.origin.s3.domainName = "frontend-b.s3.amazonaws.com";
+       } else {
+           request.origin.s3.domainName = "frontend-a.s3.amazonaws.com";
+       }
+
+       return request;
+   };
+   ```
+2. Lambda@Edge 배포:
+   - AWS Lambda 콘솔에서 함수 생성 후 CloudFront 배포에 연결.
+
+### **2.4 CodePipeline 설정**
+1. **Source 단계**:
+   - GitHub 또는 CodeCommit에서 React 프로젝트 연결.
+
+2. **Build 단계**:
+   - CodeBuild로 React 프로젝트 빌드:
+     ```yaml
+     version: 0.2
+
+     phases:
+       install:
+         runtime-versions:
+           nodejs: 16
+         commands:
+           - npm install
+       build:
+         commands:
+           - npm run build
+       post_build:
+         commands:
+           - echo "Syncing with S3..."
+           - aws s3 sync ./build s3://frontend-a
+           - aws s3 sync ./build s3://frontend-b
+     ```
+
+3. **Deploy 단계**:
+   - S3에 동기화된 결과가 CloudFront로 자동 반영.
+
+---
+
+## **3. 결과 확인**
+1. 브라우저에서 CloudFront 배포 URL 확인.
+2. 브라우저 개발자 도구에서 쿠키를 설정하여 A 또는 B 버전을 확인:
+   - A 버전:
+     ```
+     document.cookie = "version=A; path=/";
+     ```
+   - B 버전:
+     ```
+     document.cookie = "version=B; path=/";
+     ```
+
+이 설정을 통해 A/B 테스트를 구현하고, CodePipeline을 통해 자동화된 배포를 설정할 수 있습니다. 추가 질문이 있다면 말씀해주세요!
