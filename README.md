@@ -27,9 +27,41 @@
       - [Blue-Green Deployment](#blue-green-deployment)
       - [Canary Deployment](#canary-deployment)
       - [Rolling Deployment](#rolling-deployment)
+- [React 프로젝트 배포 전략: Blue-Green, Canary, Rolling Deployment](#react-프로젝트-배포-전략-blue-green-canary-rolling-deployment)
+  - [**1. 배포 전략 개요**](#1-배포-전략-개요)
+    - [**Blue-Green Deployment**](#blue-green-deployment-1)
+    - [**Canary Deployment**](#canary-deployment-1)
+    - [**Rolling Deployment**](#rolling-deployment-1)
+  - [**2. 사용 서비스 및 설정 순서**](#2-사용-서비스-및-설정-순서)
+    - [**AWS 서비스**](#aws-서비스)
+  - [**3. 설정 순서**](#3-설정-순서)
+    - [**Blue-Green Deployment 설정**](#blue-green-deployment-설정)
+      - [**CodePipeline 설정 파일 (`buildspec.yml`)**](#codepipeline-설정-파일-buildspecyml)
+    - [**Canary Deployment 설정**](#canary-deployment-설정)
+      - [**CodePipeline 설정 파일 (`buildspec.yml`)**](#codepipeline-설정-파일-buildspecyml-1)
+    - [**Rolling Deployment 설정**](#rolling-deployment-설정)
+      - [**CodePipeline 설정 파일 (`buildspec.yml`)**](#codepipeline-설정-파일-buildspecyml-2)
+    - [**EC2 기반 구성과 React 프로젝트 세팅**](#ec2-기반-구성과-react-프로젝트-세팅)
   - [3. 모놀리식 배포 (Monolithic Deployment)](#3-모놀리식-배포-monolithic-deployment)
     - [**설명**](#설명-2)
     - [**구현 방법**](#구현-방법-2)
+- [Monolithic Deployment: React 프론트엔드와 Express 백엔드](#monolithic-deployment-react-프론트엔드와-express-백엔드)
+  - [**1. Monolithic Deployment 개요**](#1-monolithic-deployment-개요)
+  - [**2. 생성해야 할 리소스 및 AWS 서비스 설명**](#2-생성해야-할-리소스-및-aws-서비스-설명)
+    - [**AWS EC2 (Elastic Compute Cloud)**](#aws-ec2-elastic-compute-cloud)
+    - [**AWS S3 (Simple Storage Service)**](#aws-s3-simple-storage-service)
+    - [**AWS IAM (Identity and Access Management)**](#aws-iam-identity-and-access-management)
+    - [**AWS CloudWatch**](#aws-cloudwatch)
+  - [**3. 설정 순서**](#3-설정-순서-1)
+    - [**1단계: 프로젝트 구조**](#1단계-프로젝트-구조)
+    - [**2단계: NGINX 설정**](#2단계-nginx-설정)
+    - [**3단계: Express 백엔드 구성**](#3단계-express-백엔드-구성)
+  - [**4. 코드 파이프라인 설정**](#4-코드-파이프라인-설정)
+    - [**1. CodePipeline 단계**](#1-codepipeline-단계)
+    - [**2. buildspec.yml 파일**](#2-buildspecyml-파일)
+    - [**3. 배포 스크립트**](#3-배포-스크립트)
+  - [**5. 추가적인 구성 및 유지 관리**](#5-추가적인-구성-및-유지-관리)
+    - [**자동화된 시작 스크립트 (User Data)**](#자동화된-시작-스크립트-user-data)
   - [4. CI/CD 파이프라인을 통한 자동화 배포](#4-cicd-파이프라인을-통한-자동화-배포)
     - [**설명**](#설명-3)
     - [**구현 방법**](#구현-방법-3)
@@ -239,6 +271,224 @@ cache:
 1. **AWS ECS**를 사용하여 클러스터 내 컨테이너를 점진적으로 업데이트.
 2. Auto Scaling 설정으로 배포 프로세스를 자동화.
 
+# React 프로젝트 배포 전략: Blue-Green, Canary, Rolling Deployment
+
+## **1. 배포 전략 개요**
+
+### **Blue-Green Deployment**
+- **특징**: 두 개의 환경(Blue, Green)을 번갈아 가며 트래픽을 전환하여 배포.
+- **목적**: 무중단 배포와 롤백 용이성 제공.
+
+### **Canary Deployment**
+- **특징**: 새로운 버전을 일부 사용자에게 먼저 배포하고, 점진적으로 확대.
+- **목적**: 새로운 버전의 안정성을 검증하며 리스크 최소화.
+
+### **Rolling Deployment**
+- **특징**: 기존 서버의 버전을 점진적으로 교체하며 배포.
+- **목적**: 무중단 배포와 자원 효율성을 강조.
+
+---
+
+## **2. 사용 서비스 및 설정 순서**
+
+### **AWS 서비스**
+1. **Elastic Beanstalk**:
+   - Blue-Green Deployment를 지원하며, 환경 간 트래픽 전환이 간단.
+2. **CodeDeploy**:
+   - Canary 및 Rolling Deployment를 지원하며, 세분화된 배포 전략 설정 가능.
+3. **CodePipeline**:
+   - CI/CD 파이프라인으로 소스 코드 변경 시 자동으로 배포.
+
+---
+
+## **3. 설정 순서**
+
+### **Blue-Green Deployment 설정**
+
+1. **Elastic Beanstalk 애플리케이션 생성**:
+   - AWS 콘솔 → Elastic Beanstalk → **Create Application** 클릭.
+   - 애플리케이션 이름 입력: `ReactApp`.
+   - 플랫폼: **Node.js** 선택.
+   - 샘플 애플리케이션 배포 후 두 개의 환경(예: `Blue-env`, `Green-env`) 생성.
+
+2. **환경 설정 및 배포**:
+   - **Blue 환경**:
+     - Elastic Beanstalk → `Blue-env` 선택.
+     - `npm run build`로 빌드한 애플리케이션을 `.zip` 파일로 압축:
+       ```bash
+       zip -r build.zip ./build
+       ```
+     - Blue 환경에 `.zip` 파일 업로드.
+   - **Green 환경**:
+     - Elastic Beanstalk → **Create Environment** 클릭.
+     - 동일한 애플리케이션 `.zip` 파일을 Green 환경에 배포.
+
+3. **트래픽 전환**:
+   - Elastic Beanstalk → **환경(Environment)** → **Swap Environment URLs** 클릭.
+   - 트래픽을 Blue에서 Green으로 전환.
+
+#### **CodePipeline 설정 파일 (`buildspec.yml`)**
+```yaml
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - npm install
+  build:
+    commands:
+      - npm run build
+  post_build:
+    commands:
+      - echo "Zipping the build folder..."
+      - zip -r build.zip ./build
+      - echo "Deploying to Elastic Beanstalk"
+      - aws elasticbeanstalk create-application-version --application-name ReactApp \
+          --version-label $CODEBUILD_RESOLVED_SOURCE_VERSION --source-bundle S3Bucket=my-bucket,S3Key=build.zip
+      - aws elasticbeanstalk update-environment --application-name ReactApp \
+          --environment-name Green-env --version-label $CODEBUILD_RESOLVED_SOURCE_VERSION
+```
+
+---
+
+### **Canary Deployment 설정**
+
+1. **CodeDeploy 애플리케이션 생성**:
+   - AWS 콘솔 → CodeDeploy → **Applications** → **Create Application** 클릭.
+   - 애플리케이션 이름 입력: `ReactAppCanary`.
+   - 컴퓨팅 플랫폼: **EC2/On-premises** 선택.
+
+2. **Deployment Group 생성**:
+   - CodeDeploy → 애플리케이션 선택 → **Create Deployment Group** 클릭.
+   - 배포 그룹 이름: `CanaryGroup`.
+   - 서비스 역할 선택: `AWSCodeDeployRole`.
+   - 배포 유형: **Canary** 선택.
+     - 첫 배포: 10% 트래픽.
+     - 5분 후 90% 트래픽.
+
+3. **배포 구성**:
+   - CodeDeploy → **Create Deployment** 클릭.
+   - 배포 애플리케이션 및 배포 그룹 선택.
+   - 소스 버전 업로드.
+
+#### **CodePipeline 설정 파일 (`buildspec.yml`)**
+```yaml
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - npm install
+  build:
+    commands:
+      - npm run build
+  post_build:
+    commands:
+      - echo "Zipping the build folder..."
+      - zip -r build.zip ./build
+      - echo "Deploying to CodeDeploy"
+      - aws deploy create-deployment --application-name ReactAppCanary \
+          --deployment-group-name CanaryGroup \
+          --revision file://build.zip \
+          --deployment-config-name CodeDeployDefault.Canary10Percent5Minutes
+```
+
+---
+
+### **Rolling Deployment 설정**
+
+1. **CodeDeploy 애플리케이션 생성**:
+   - AWS 콘솔 → CodeDeploy → **Applications** → **Create Application** 클릭.
+   - 애플리케이션 이름 입력: `ReactAppRolling`.
+   - 컴퓨팅 플랫폼: **EC2/On-premises** 선택.
+
+2. **Deployment Group 생성**:
+   - CodeDeploy → 애플리케이션 선택 → **Create Deployment Group** 클릭.
+   - 배포 그룹 이름: `RollingGroup`.
+   - 서비스 역할 선택: `AWSCodeDeployRole`.
+   - 배포 유형: **Rolling** 설정.
+     - `CodeDeployDefault.OneAtATime` 구성 선택.
+
+3. **배포 구성**:
+   - CodeDeploy → **Create Deployment** 클릭.
+   - 배포 애플리케이션 및 배포 그룹 선택.
+   - 소스 버전 업로드.
+
+#### **CodePipeline 설정 파일 (`buildspec.yml`)**
+```yaml
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - npm install
+  build:
+    commands:
+      - npm run build
+  post_build:
+    commands:
+      - echo "Zipping the build folder..."
+      - zip -r build.zip ./build
+      - echo "Deploying to CodeDeploy with Rolling Update"
+      - aws deploy create-deployment --application-name ReactAppRolling \
+          --deployment-group-name RollingGroup \
+          --revision file://build.zip \
+          --deployment-config-name CodeDeployDefault.OneAtATime
+```
+
+---
+
+### **EC2 기반 구성과 React 프로젝트 세팅**
+
+1. **EC2 인스턴스 생성**:
+   - AWS 콘솔 → EC2 → **Launch Instance** 클릭.
+   - Amazon Linux 2 또는 Ubuntu 선택.
+   - 보안 그룹에서 HTTP(80)와 SSH(22) 포트를 열어줌.
+
+2. **Node.js 설치**:
+   - EC2에 SSH로 접속:
+     ```bash
+     ssh -i my-key.pem ec2-user@<EC2_PUBLIC_IP>
+     ```
+   - Node.js 설치:
+     ```bash
+     curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
+     sudo yum install -y nodejs
+     ```
+
+3. **React 프로젝트 배포**:
+   - 프로젝트 코드 클론:
+     ```bash
+     git clone https://github.com/your-repo.git
+     cd your-repo
+     ```
+   - 의존성 설치 및 빌드:
+     ```bash
+     npm install
+     npm run build
+     ```
+   - HTTP 서버 실행:
+     ```bash
+     npx serve -s build -l 80
+     ```
+
+4. **PM2로 프로세스 관리**:
+   - PM2 설치:
+     ```bash
+     sudo npm install -g pm2
+     ```
+   - React 애플리케이션 실행:
+     ```bash
+     pm2 start npx --name "react-app" -- serve -s build -l 80
+     pm2 save
+     ```
+
 ---
 
 ## 3. 모놀리식 배포 (Monolithic Deployment)
@@ -251,6 +501,221 @@ cache:
 2. **SSH**로 EC2에 접속하여 코드를 업로드.
 3. **NGINX**를 설치하여 정적 파일 서빙 및 백엔드 요청 프록시 처리.
 4. 애플리케이션 실행 및 상태 모니터링.
+
+# Monolithic Deployment: React 프론트엔드와 Express 백엔드
+
+## **1. Monolithic Deployment 개요**
+- **특징**: 프론트엔드와 백엔드가 하나의 애플리케이션으로 구성되어 단일 서버에서 실행 및 관리되는 배포 방식.
+- **구조**:
+  - 프론트엔드: React 애플리케이션 (폴더: `frontend`).
+  - 백엔드: Express.js 서버 (폴더: `backend`).
+  - NGINX를 사용하여 정적 파일과 API 요청을 분기 처리.
+- **장점**: 설정이 단순하며 초기 개발 및 배포가 빠름.
+- **단점**: 확장성과 유지보수에서 한계.
+
+---
+
+## **2. 생성해야 할 리소스 및 AWS 서비스 설명**
+
+### **AWS EC2 (Elastic Compute Cloud)**
+- **역할**: React 프론트엔드와 Express 백엔드 서버를 실행.
+- **특징**:
+  - 인스턴스 내부에서 Node.js와 NGINX를 사용하여 애플리케이션 서빙.
+
+### **AWS S3 (Simple Storage Service)**
+- **역할**: 정적 파일(HTML, CSS, JS) 백업 및 저장소로 사용 가능.
+
+### **AWS IAM (Identity and Access Management)**
+- **역할**: EC2와 S3 접근 권한 관리.
+
+### **AWS CloudWatch**
+- **역할**: 애플리케이션 및 서버 모니터링.
+
+---
+
+## **3. 설정 순서**
+
+### **1단계: 프로젝트 구조**
+
+```plaintext
+project-root/
+├── backend/           # Express.js 서버 코드
+│   ├── package.json
+│   ├── server.js
+│   └── routes/
+├── frontend/          # React 애플리케이션
+│   ├── package.json
+│   ├── public/
+│   ├── src/
+│   └── build/         # React 빌드 결과
+└── Dockerfile         # 전체 애플리케이션을 위한 Dockerfile
+```
+
+### **2단계: NGINX 설정**
+
+1. **NGINX 설치**:
+   - EC2에 접속 후 NGINX 설치:
+     ```bash
+     sudo yum update -y
+     sudo amazon-linux-extras enable nginx1
+     sudo yum install -y nginx
+     ```
+
+2. **NGINX 설정 파일 편집**:
+   - 설정 파일 위치: `/etc/nginx/conf.d/default.conf`.
+   - 내용:
+     ```nginx
+     server {
+         listen 80;
+
+         location / {
+             root /var/www/frontend;
+             index index.html;
+             try_files $uri /index.html;
+         }
+
+         location /api/ {
+             proxy_pass http://localhost:3000;
+             proxy_http_version 1.1;
+             proxy_set_header Upgrade $http_upgrade;
+             proxy_set_header Connection 'upgrade';
+             proxy_set_header Host $host;
+             proxy_cache_bypass $http_upgrade;
+         }
+     }
+     ```
+
+3. **정적 파일 및 서버 실행**:
+   - React 빌드 파일 복사:
+     ```bash
+     sudo mkdir -p /var/www/frontend
+     sudo cp -r /home/ec2-user/project-root/frontend/build/* /var/www/frontend/
+     ```
+   - NGINX 재시작:
+     ```bash
+     sudo systemctl restart nginx
+     ```
+
+### **3단계: Express 백엔드 구성**
+
+1. **백엔드 서버 설정**:
+   - `backend/server.js`:
+     ```javascript
+     const express = require('express');
+     const app = express();
+
+     // Serve static files from React build
+     app.use(express.static('../frontend/build'));
+
+     // API routes
+     app.get('/api/hello', (req, res) => {
+         res.json({ message: 'Hello from server!' });
+     });
+
+     // Catch-all handler for React routing
+     app.get('*', (req, res) => {
+         res.sendFile(require('path').join(__dirname, '../frontend/build', 'index.html'));
+     });
+
+     const PORT = process.env.PORT || 3000;
+     app.listen(PORT, () => {
+         console.log(`Server is running on port ${PORT}`);
+     });
+     ```
+
+2. **Express 실행**:
+   ```bash
+   cd backend
+   npm install
+   node server.js
+   ```
+
+3. **PM2로 Express 관리**:
+   ```bash
+   sudo npm install -g pm2
+   pm2 start backend/server.js --name "backend-server"
+   pm2 save
+   ```
+
+---
+
+## **4. 코드 파이프라인 설정**
+
+### **1. CodePipeline 단계**
+1. **Source 단계**:
+   - GitHub 또는 CodeCommit을 소스 리포지토리로 사용.
+
+2. **Build 단계**:
+   - CodeBuild를 사용하여 React 애플리케이션 빌드 및 Express 백엔드 준비.
+
+3. **Deploy 단계**:
+   - EC2 인스턴스에 빌드 결과 배포.
+
+### **2. buildspec.yml 파일**
+```yaml
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - echo "Installing dependencies..."
+      - cd frontend && npm install
+      - cd ../backend && npm install
+  build:
+    commands:
+      - echo "Building React app..."
+      - cd ../frontend && npm run build
+  post_build:
+    commands:
+      - echo "Packaging files..."
+      - zip -r deployment-package.zip frontend/build backend
+artifacts:
+  files:
+    - deployment-package.zip
+```
+
+### **3. 배포 스크립트**
+- EC2에서 실행할 배포 스크립트 예시:
+```bash
+#!/bin/bash
+# Extract deployment package
+unzip deployment-package.zip -d /home/ec2-user/project-root
+
+# Move frontend build to NGINX directory
+sudo cp -r /home/ec2-user/project-root/frontend/build/* /var/www/frontend/
+
+# Restart backend server with PM2
+pm2 restart backend-server
+```
+
+---
+
+## **5. 추가적인 구성 및 유지 관리**
+
+### **자동화된 시작 스크립트 (User Data)**
+- EC2 생성 시 초기 설정 자동화:
+  ```bash
+  #!/bin/bash
+  yum update -y
+  amazon-linux-extras enable nginx1
+  yum install -y nginx git nodejs
+  systemctl start nginx
+
+  git clone https://github.com/your-repo.git /home/ec2-user/project-root
+  cd /home/ec2-user/project-root
+
+  cd frontend
+  npm install
+  npm run build
+  sudo cp -r build/* /var/www/frontend/
+
+  cd ../backend
+  npm install
+  pm2 start server.js --name "backend-server"
+  pm2 save
+  ```
 
 ---
 
