@@ -20,7 +20,7 @@ phases:
   post_build: # 빌드 후 S3에 파일을 업로드.
     commands:
       - echo "Syncing build output to S3..."
-      - aws s3 sync frontend/build/ s3://$S3_BUCKET --delete
+      - aws s3 sync build/ s3://$S3_BUCKET --delete
       - echo "Invalidating CloudFront cache..."
       - aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
 artifacts: # 빌드 결과물을 저장 및 배포할 파일 패턴 정의.
