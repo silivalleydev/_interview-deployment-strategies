@@ -5,7 +5,7 @@ const App: React.FC = () => {
   return (
     <>
       <div>
-        App
+        NEWWWW
         <ExtraComponent/>
       </div>
     </>

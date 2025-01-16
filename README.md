@@ -21,25 +21,18 @@
     - [**S3 및 CloudFront 구분**](#s3-및-cloudfront-구분)
     - [**CodePipeline 환경 구분**](#codepipeline-환경-구분)
       - [**환경별 `buildspec.yml`**](#환경별-buildspecyml)
-- [Next.js App Router 기반 모놀리식 배포 가이드](#nextjs-app-router-기반-모놀리식-배포-가이드)
+- [Next.js App Router 기반 모놀리식 배포 가이드 (Nginx \& Next.js 분리)](#nextjs-app-router-기반-모놀리식-배포-가이드-nginx--nextjs-분리)
   - [**1. 개발 및 구현 순서**](#1-개발-및-구현-순서)
     - [**1.1 프로젝트 설정**](#11-프로젝트-설정)
   - [**2. Docker 환경 설정**](#2-docker-환경-설정)
-    - [**2.1 Dockerfile 작성**](#21-dockerfile-작성)
-    - [**2.2 Docker Compose 작성**](#22-docker-compose-작성)
-  - [**3. AWS ECR 및 ECS 설정 (AWS Console)**](#3-aws-ecr-및-ecs-설정-aws-console)
-    - [**3.1 AWS ECR 설정**](#31-aws-ecr-설정)
-    - [**3.2 Docker 이미지 빌드 및 푸시**](#32-docker-이미지-빌드-및-푸시)
-    - [**3.3 ECS 클러스터 생성**](#33-ecs-클러스터-생성)
-    - [**3.4 태스크 정의 생성**](#34-태스크-정의-생성)
-    - [**3.5 서비스 생성**](#35-서비스-생성)
-  - [**4. Nginx를 사용한 정적 파일 및 이미지 캐싱**](#4-nginx를-사용한-정적-파일-및-이미지-캐싱)
-    - [**4.1 Nginx 설정 파일**](#41-nginx-설정-파일)
-    - [**4.2 정적 파일 배포**](#42-정적-파일-배포)
-  - [**5. AWS CodePipeline으로 무중단 배포 설정**](#5-aws-codepipeline으로-무중단-배포-설정)
-    - [**5.1 CodePipeline 구성 (콘솔)**](#51-codepipeline-구성-콘솔)
-    - [**5.2 CodePipeline 구성 파일**](#52-codepipeline-구성-파일)
-  - [**6. 결론 및 최적화**](#6-결론-및-최적화)
+    - [**2.1 Next.js 서버용 Dockerfile 작성**](#21-nextjs-서버용-dockerfile-작성)
+    - [**2.2 Nginx용 Dockerfile 작성**](#22-nginx용-dockerfile-작성)
+    - [**2.3 Docker Compose 작성**](#23-docker-compose-작성)
+  - [**3. Nginx 설정 파일 작성**](#3-nginx-설정-파일-작성)
+  - [**4. AWS CodePipeline으로 무중단 배포 설정**](#4-aws-codepipeline으로-무중단-배포-설정)
+    - [**4.1 CodePipeline 구성 파일 작성**](#41-codepipeline-구성-파일-작성)
+    - [**4.2 ECS 서비스 구성**](#42-ecs-서비스-구성)
+  - [**5. 결론 및 최적화**](#5-결론-및-최적화)
 - [CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포](#cicd-파이프라인을-통한-react-프로젝트-자동화-배포)
   - [**1. CI와 CD의 의미**](#1-ci와-cd의-의미)
     - [**1.1 CI (Continuous Integration)**](#11-ci-continuous-integration)
@@ -281,7 +274,7 @@ cache:
       - aws s3 sync build/ s3://my-frontend-app-prd --delete
   ```
 
-# Next.js App Router 기반 모놀리식 배포 가이드
+# Next.js App Router 기반 모놀리식 배포 가이드 (Nginx & Next.js 분리)
 
 ## **1. 개발 및 구현 순서**
 
@@ -337,8 +330,8 @@ cache:
 
 ## **2. Docker 환경 설정**
 
-### **2.1 Dockerfile 작성**
-프로젝트 루트에 `Dockerfile` 생성:
+### **2.1 Next.js 서버용 Dockerfile 작성**
+프로젝트 루트에 `Dockerfile.nextjs` 생성:
 ```dockerfile
 # Base image
 FROM node:18 AS builder
@@ -361,10 +354,7 @@ FROM node:18 AS runner
 WORKDIR /app
 
 # 빌드 결과물을 복사합니다.
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app .
 
 # 어플리케이션 포트를 노출합니다.
 EXPOSE 3000
@@ -373,74 +363,49 @@ EXPOSE 3000
 CMD ["yarn", "start"]
 ```
 
-### **2.2 Docker Compose 작성**
+### **2.2 Nginx용 Dockerfile 작성**
+프로젝트 루트에 `Dockerfile.nginx` 생성:
+```dockerfile
+# Base Nginx image
+FROM nginx:alpine
+
+# Nginx 설정 파일 복사
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# 정적 파일 복사
+COPY out /usr/share/nginx/html
+
+# Nginx 포트 노출
+EXPOSE 80
+```
+
+### **2.3 Docker Compose 작성**
 `docker-compose.yml` 파일:
 ```yaml
 version: "3.8"
 services:
-  next-app:
+  nginx:
     build:
       context: .
-      dockerfile: Dockerfile # Dockerfile의 경로를 지정합니다.
+      dockerfile: Dockerfile.nginx
     ports:
-      - "3000:3000" # 로컬과 컨테이너 포트를 매핑합니다.
+      - "80:80"
+    depends_on:
+      - nextjs
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile.nextjs
+    ports:
+      - "3000:3000"
     environment:
-      NODE_ENV: production # 환경 변수를 정의합니다.
+      NODE_ENV: production
 ```
 
 ---
 
-## **3. AWS ECR 및 ECS 설정 (AWS Console)**
-
-### **3.1 AWS ECR 설정**
-1. AWS Management Console에서 **ECR (Elastic Container Registry)**로 이동합니다.
-2. **리포지토리 생성**을 클릭합니다.
-3. 리포지토리 이름에 `my-monolith-app`을 입력합니다.
-4. **프라이빗** 리포지토리로 설정하고 생성합니다.
-
-### **3.2 Docker 이미지 빌드 및 푸시**
-1. Docker 이미지를 빌드합니다:
-   ```bash
-   docker build -t my-monolith-app .
-   ```
-2. AWS ECR에서 푸시 명령어를 복사하여 실행합니다.
-   - 로그인 명령어 실행.
-   - 태그 지정 명령어 실행.
-   - Docker 이미지를 푸시합니다.
-
-### **3.3 ECS 클러스터 생성**
-1. AWS Management Console에서 **ECS**로 이동합니다.
-2. **클러스터 생성**을 클릭합니다.
-3. "클러스터 템플릿"에서 **EC2 Linux + Networking**을 선택합니다.
-4. 클러스터 이름을 `my-monolith-cluster`로 입력하고 생성합니다.
-
-### **3.4 태스크 정의 생성**
-1. ECS에서 **태스크 정의**로 이동합니다.
-2. **새 태스크 정의 생성** 버튼을 클릭합니다.
-3. "Fargate" 또는 "EC2"를 선택합니다.
-4. 다음을 입력:
-   - 태스크 정의 이름: `my-monolith-task`.
-   - 컨테이너 추가: 
-     - 이름: `my-monolith-app`.
-     - 이미지: `<account_id>.dkr.ecr.<region>.amazonaws.com/my-monolith-app:latest`.
-     - 포트 매핑: 컨테이너 포트 `3000`.
-5. 저장 후 태스크 정의를 등록합니다.
-
-### **3.5 서비스 생성**
-1. ECS에서 **서비스**로 이동합니다.
-2. **새 서비스 생성** 버튼을 클릭합니다.
-3. 다음을 입력:
-   - 클러스터 이름: `my-monolith-cluster`.
-   - 서비스 이름: `my-monolith-service`.
-   - 태스크 정의: `my-monolith-task`.
-   - 원하는 태스크 수: `1`.
-4. **다음**을 클릭하고 서비스 생성을 완료합니다.
-
----
-
-## **4. Nginx를 사용한 정적 파일 및 이미지 캐싱**
-
-### **4.1 Nginx 설정 파일**
+## **3. Nginx 설정 파일 작성**
 `nginx.conf`
 ```nginx
 server {
@@ -448,22 +413,23 @@ server {
 
     server_name example.com;
 
-    # Next.js 정적 파일을 캐싱합니다.
+    # Next.js 정적 파일 캐싱
     location /_next/static/ {
         root /usr/share/nginx/html;
-        expires 1y; # 1년 동안 캐싱합니다.
+        expires 1y;
         add_header Cache-Control "public, max-age=31536000";
     }
 
     # 정적 HTML 파일 서빙
-    location /c {
+    location /c/ {
         root /usr/share/nginx/html;
-        index c.html; # C 페이지의 기본 파일
+        index index.html;
+        try_files $uri $uri/ /index.html;
     }
 
     # 모든 기타 요청은 Next.js 서버로 전달
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://nextjs:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -473,93 +439,71 @@ server {
 }
 ```
 
-### **4.2 정적 파일 배포**
-1. Next.js 빌드 시 생성된 `.next/static` 디렉토리를 `/usr/share/nginx/html/_next/static/`로 복사.
-2. C 페이지의 HTML 파일을 `/usr/share/nginx/html/c.html`로 복사하여 서빙 가능하도록 설정.
-3. Nginx를 통해 캐싱된 정적 파일 및 HTML 서빙.
-
-> **질문 답변:**
-> 정적 파일과 C 페이지를 Nginx로 처리하도록 설정한 경우, Next.js 서버를 거치지 않고 Nginx가 직접 서빙합니다. 이를 위해 Nginx 설정에서 `/c` 경로와 `_next/static` 경로를 명확히 정의해야 합니다. Next.js를 거쳐도 캐싱된 파일을 사용할 수 있지만, 성능 최적화를 위해 Nginx가 직접 처리하는 것이 효율적입니다.
-
 ---
 
-## **5. AWS CodePipeline으로 무중단 배포 설정**
+## **4. AWS CodePipeline으로 무중단 배포 설정**
 
-### **5.1 CodePipeline 구성 (콘솔)**
-1. **CodePipeline**으로 이동하여 **파이프라인 생성**을 클릭합니다.
-2. 다음을 입력:
-   - 파이프라인 이름: `my-monolith-pipeline`.
-   - 역할 생성: 자동으로 역할 생성.
-3. **소스 단계 구성**:
-   - 공급자: **CodeCommit**.
-   - 리포지토리 이름: `my-monolith-app`.
-   - 브랜치 이름: `main`.
-4. **빌드 단계 구성**:
-   - 공급자: **CodeBuild**.
-   - 프로젝트 생성: "새 CodeBuild 프로젝트".
-     - 이름: `my-monolith-build`.
-     - 환경: "관리형 이미지" 선택.
-     - 런타임: Node.js.
-     - 빌드 명령어:
-       ```bash
-       npm install
-       npm run build
-       ```
-5. **배포 단계 구성**:
-   - 공급자: **ECS**.
-   - 클러스터 이름: `my-monolith-cluster`.
-   - 서비스 이름: `my-monolith-service`.
-6. 모든 설정을 완료한 후 **파이프라인 생성**을 클릭합니다.
-
-### **5.2 CodePipeline 구성 파일**
+### **4.1 CodePipeline 구성 파일 작성**
 `buildspec.yml`
 ```yaml
 version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 18 # Node.js 18 버전을 사용합니다.
+      nodejs: 18
     commands:
       - echo Installing dependencies...
-      - npm install # 프로젝트의 의존성을 설치합니다.
+      - npm install
   build:
     commands:
       - echo Building the project...
-      - npm run build # Next.js 애플리케이션을 빌드합니다.
+      - npm run build
+      - npx next export
   post_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com # Amazon ECR에 로그인합니다.
-      - echo Tagging Docker image...
-      - docker build -t my-monolith-app . # Docker 이미지를 빌드합니다.
-      - docker tag my-monolith-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app:latest # 빌드된 이미지를 태그합니다.
-      - echo Pushing Docker image...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app:latest # 이미지를 Amazon ECR로 푸시합니다.
-      - echo Updating ECS Service...
-      - aws ecs update-service --cluster my-monolith-cluster --service my-monolith-service --force-new-deployment # ECS 서비스에 새 배포를 트리거합니다.
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - echo Building Next.js image...
+      - docker build -f Dockerfile.nextjs -t my-monolith-app-nextjs .
+      - docker tag my-monolith-app-nextjs:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app-nextjs:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app-nextjs:latest
+      - echo Building Nginx image...
+      - docker build -f Dockerfile.nginx -t my-monolith-app-nginx .
+      - docker tag my-monolith-app-nginx:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app-nginx:latest
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app-nginx:latest
+      - echo Updating ECS services...
+      - aws ecs update-service --cluster my-monolith-cluster --service my-monolith-service-nextjs --force-new-deployment
+      - aws ecs update-service --cluster my-monolith-cluster --service my-monolith-service-nginx --force-new-deployment
 artifacts:
   files:
-    - '**/*' # 빌드 아티팩트를 정의합니다.
+    - '**/*'
 ```
+
+### **4.2 ECS 서비스 구성**
+1. **Next.js 서비스**:
+   - 컨테이너 이름: `my-monolith-app-nextjs`.
+   - 포트 매핑: `3000`.
+2. **Nginx 서비스**:
+   - 컨테이너 이름: `my-monolith-app-nginx`.
+   - 포트 매핑: `80`.
 
 ---
 
-## **6. 결론 및 최적화**
+## **5. 결론 및 최적화**
 
 1. **정적 및 동적 요청 분리**:
-   - 정적 파일은 Nginx 또는 CDN으로 처리하여 서버 부하를 줄임.
-   - 동적 요청(API, SSR 등)은 Next.js 서버에서 처리.
+   - 정적 파일은 Nginx에서 처리하여 서버 부하를 줄임.
+   - 동적 요청은 Next.js 서버에서 처리.
 
 2. **이미지 최적화**:
    - Next.js `next/image`와 Nginx/CloudFront를 조합해 글로벌 이미지 캐싱.
 
 3. **무중단 배포**:
-   - AWS CodePipeline과 ECS를 활용해 새로운 배포가 기존 서비스에 영향을 주지 않도록 구현.
+   - CodePipeline과 ECS를 활용해 새로운 배포가 기존 서비스에 영향을 주지 않도록 구현.
 
-4. **모놀리식 유지보수**:
-   - 사이트별로 코드를 명확히 분리하여 관리.
-   - 도커 기반으로 배포하여 CI/CD를 쉽게 구성.
-
+4. **구조적 유지보수**:
+   - Nginx와 Next.js 서버를 분리하여 관리.
+   - 도커 기반으로 CI/CD를 쉽게 구성.
 
 
 # CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포
