@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = {
   entry: './src/index.tsx', // 진입점 파일
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'build'),
     filename: '[name].[contenthash].js', // 번들 이름에 해시 추가
     clean: true, // 매번 빌드 시 dist 폴더 정리
   },
