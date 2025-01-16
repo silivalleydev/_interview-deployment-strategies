@@ -21,50 +21,25 @@
     - [**S3 및 CloudFront 구분**](#s3-및-cloudfront-구분)
     - [**CodePipeline 환경 구분**](#codepipeline-환경-구분)
       - [**환경별 `buildspec.yml`**](#환경별-buildspecyml)
-  - [2. 무중단 배포 (Zero-Downtime Deployment)](#2-무중단-배포-zero-downtime-deployment)
-    - [**설명**](#설명-1)
-    - [**구현 방법**](#구현-방법-1)
-      - [Blue-Green Deployment](#blue-green-deployment)
-      - [Canary Deployment](#canary-deployment)
-      - [Rolling Deployment](#rolling-deployment)
-- [React 프로젝트 배포 전략: Blue-Green, Canary, Rolling Deployment](#react-프로젝트-배포-전략-blue-green-canary-rolling-deployment)
-  - [**1. 배포 전략 개요**](#1-배포-전략-개요)
-    - [**Blue-Green Deployment**](#blue-green-deployment-1)
-    - [**Canary Deployment**](#canary-deployment-1)
-    - [**Rolling Deployment**](#rolling-deployment-1)
-  - [**2. 사용 서비스 및 설정 순서**](#2-사용-서비스-및-설정-순서)
-    - [**AWS 서비스**](#aws-서비스)
-  - [**3. 설정 순서**](#3-설정-순서)
-    - [**Blue-Green Deployment 설정**](#blue-green-deployment-설정)
-      - [**CodePipeline 설정 파일 (`buildspec.yml`)**](#codepipeline-설정-파일-buildspecyml)
-    - [**Canary Deployment 설정**](#canary-deployment-설정)
-      - [**CodePipeline 설정 파일 (`buildspec.yml`)**](#codepipeline-설정-파일-buildspecyml-1)
-    - [**Rolling Deployment 설정**](#rolling-deployment-설정)
-      - [**CodePipeline 설정 파일 (`buildspec.yml`)**](#codepipeline-설정-파일-buildspecyml-2)
-    - [**EC2 기반 구성과 React 프로젝트 세팅**](#ec2-기반-구성과-react-프로젝트-세팅)
-  - [3. 모놀리식 배포 (Monolithic Deployment)](#3-모놀리식-배포-monolithic-deployment)
-    - [**설명**](#설명-2)
-    - [**구현 방법**](#구현-방법-2)
-- [Monolithic Deployment: React 프론트엔드와 Express 백엔드](#monolithic-deployment-react-프론트엔드와-express-백엔드)
-  - [**1. Monolithic Deployment 개요**](#1-monolithic-deployment-개요)
-  - [**2. 생성해야 할 리소스 및 AWS 서비스 설명**](#2-생성해야-할-리소스-및-aws-서비스-설명)
-    - [**AWS EC2 (Elastic Compute Cloud)**](#aws-ec2-elastic-compute-cloud)
-    - [**AWS S3 (Simple Storage Service)**](#aws-s3-simple-storage-service)
-    - [**AWS IAM (Identity and Access Management)**](#aws-iam-identity-and-access-management)
-    - [**AWS CloudWatch**](#aws-cloudwatch)
-  - [**3. 설정 순서**](#3-설정-순서-1)
-    - [**1단계: 프로젝트 구조**](#1단계-프로젝트-구조)
-    - [**2단계: NGINX 설정**](#2단계-nginx-설정)
-    - [**3단계: Express 백엔드 구성**](#3단계-express-백엔드-구성)
-  - [**4. 코드 파이프라인 설정**](#4-코드-파이프라인-설정)
-    - [**1. CodePipeline 단계**](#1-codepipeline-단계)
-    - [**2. buildspec.yml 파일**](#2-buildspecyml-파일)
-    - [**3. 배포 스크립트**](#3-배포-스크립트)
-  - [**5. 추가적인 구성 및 유지 관리**](#5-추가적인-구성-및-유지-관리)
-    - [**자동화된 시작 스크립트 (User Data)**](#자동화된-시작-스크립트-user-data)
-  - [4. CI/CD 파이프라인을 통한 자동화 배포](#4-cicd-파이프라인을-통한-자동화-배포)
-    - [**설명**](#설명-3)
-    - [**구현 방법**](#구현-방법-3)
+- [Next.js App Router 기반 모놀리식 배포 가이드](#nextjs-app-router-기반-모놀리식-배포-가이드)
+  - [**1. 개발 및 구현 순서**](#1-개발-및-구현-순서)
+    - [**1.1 프로젝트 설정**](#11-프로젝트-설정)
+  - [**2. Docker 환경 설정**](#2-docker-환경-설정)
+    - [**2.1 Dockerfile 작성**](#21-dockerfile-작성)
+    - [**2.2 Docker Compose 작성**](#22-docker-compose-작성)
+  - [**3. AWS ECR 및 ECS 설정 (AWS Console)**](#3-aws-ecr-및-ecs-설정-aws-console)
+    - [**3.1 AWS ECR 설정**](#31-aws-ecr-설정)
+    - [**3.2 Docker 이미지 빌드 및 푸시**](#32-docker-이미지-빌드-및-푸시)
+    - [**3.3 ECS 클러스터 생성**](#33-ecs-클러스터-생성)
+    - [**3.4 태스크 정의 생성**](#34-태스크-정의-생성)
+    - [**3.5 서비스 생성**](#35-서비스-생성)
+  - [**4. Nginx를 사용한 정적 파일 및 이미지 캐싱**](#4-nginx를-사용한-정적-파일-및-이미지-캐싱)
+    - [**4.1 Nginx 설정 파일**](#41-nginx-설정-파일)
+    - [**4.2 정적 파일 배포**](#42-정적-파일-배포)
+  - [**5. AWS CodePipeline으로 무중단 배포 설정**](#5-aws-codepipeline으로-무중단-배포-설정)
+    - [**5.1 CodePipeline 구성 (콘솔)**](#51-codepipeline-구성-콘솔)
+    - [**5.2 CodePipeline 구성 파일**](#52-codepipeline-구성-파일)
+  - [**6. 결론 및 최적화**](#6-결론-및-최적화)
 - [CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포](#cicd-파이프라인을-통한-react-프로젝트-자동화-배포)
   - [**1. CI와 CD의 의미**](#1-ci와-cd의-의미)
     - [**1.1 CI (Continuous Integration)**](#11-ci-continuous-integration)
@@ -75,19 +50,9 @@
     - [**2.3 AWS S3**](#23-aws-s3)
     - [**2.4 AWS CloudFront**](#24-aws-cloudfront)
     - [**2.5 AWS IAM (Identity and Access Management)**](#25-aws-iam-identity-and-access-management)
-  - [**3. CI/CD 파이프라인 설정 순서**](#3-cicd-파이프라인-설정-순서)
-    - [**3.1 S3 버킷 생성 및 설정**](#31-s3-버킷-생성-및-설정)
-    - [**3.2 IAM 역할 생성**](#32-iam-역할-생성)
-    - [**3.3 CodeBuild 프로젝트 생성**](#33-codebuild-프로젝트-생성)
-    - [**3.4 CloudFront 배포 설정**](#34-cloudfront-배포-설정)
-    - [**3.5 CodePipeline 생성**](#35-codepipeline-생성)
-  - [**4. `buildspec.yml` 작성 방법**](#4-buildspecyml-작성-방법)
-    - [**4.1 파일 내용**](#41-파일-내용)
-    - [**4.2 옵션 설명**](#42-옵션-설명)
-  - [**5. 결과 확인**](#5-결과-확인)
-  - [5. A/B 테스트 배포](#5-ab-테스트-배포)
-    - [**설명**](#설명-4)
-    - [**구현 방법**](#구현-방법-4)
+  - [A/B 테스트 배포](#ab-테스트-배포)
+    - [**설명**](#설명-1)
+    - [**구현 방법**](#구현-방법-1)
 - [A/B 테스트 배포 설정](#ab-테스트-배포-설정)
   - [**1. A/B 테스트를 위한 AWS 리소스**](#1-ab-테스트를-위한-aws-리소스)
     - [**1.1 AWS S3**](#11-aws-s3)
@@ -190,6 +155,8 @@ CDN 배포는 정적 파일(HTML, CSS, JS)을 전 세계 엣지 서버에 분산
      - Viewer Protocol Policy: **Redirect HTTP to HTTPS**.
      - Allowed HTTP Methods: **GET, HEAD**.
    - 배포 생성 완료 후 도메인 이름 확인.
+   - 생성 후 원본탭, 원본 편집에 들어가 origin domain을 `<bucket-name>.s3-website.<region>.amazonaws.com` 형식으로 변경
+     - 변경후 무효화탭 -> 무효화 생성 -> 객체 경로 추가에 `/*` 입력하고 무효화 생성 누르고 도메인으로 접속
 
 ---
 
@@ -208,7 +175,7 @@ CDN 배포는 정적 파일(HTML, CSS, JS)을 전 세계 엣지 서버에 분산
             {
                 "Effect": "Allow",
                 "Principal": {
-                    "AWS": "arn:aws:iam::514278804051:root"
+                    "AWS": "arn:aws:iam::xxxxxx:root"
                 },
                 "Action": "sts:AssumeRole",
                 "Condition": {}
@@ -223,6 +190,7 @@ CDN 배포는 정적 파일(HTML, CSS, JS)을 전 세계 엣지 서버에 분산
         ]
     }
     ```
+    - 예를들어 `codebuild-cdn-deployment-service-role` 과 같은 `code build용 role`이 생겼다면 해당 role에 `CloudFrontFullAccess` 추가
 
 2. **CodePipeline 생성**:
    - AWS 콘솔 → CodePipeline → 새 파이프라인 생성.
@@ -313,488 +281,286 @@ cache:
       - aws s3 sync build/ s3://my-frontend-app-prd --delete
   ```
 
+# Next.js App Router 기반 모놀리식 배포 가이드
+
+## **1. 개발 및 구현 순서**
+
+### **1.1 프로젝트 설정**
+1. **Next.js 설치 및 초기화**
+   - AWS Management Console에서 CodeCommit으로 이동합니다.
+   - "리포지토리 생성" 버튼을 클릭합니다.
+   - 리포지토리 이름으로 `my-monolith-app`을 입력하고 생성합니다.
+
+2. **폴더 구조 설정**
+   ```
+   /app/
+     - /a/ (사이트 A 페이지)
+     - /b/ (사이트 B 페이지)
+     - /c/ (사이트 C 페이지, 정적 사이트)
+     - /shared/ (공용 컴포넌트 및 유틸리티)
+   ```
+   **App Router 사용 시** 각 사이트를 `/app/{site}` 디렉토리에 배치합니다.
+
+3. **정적 사이트 페이지 (`/c`) 구성**
+   `app/c/page.js`
+   ```javascript
+   export const dynamic = 'force-static'; // 정적 페이지로 강제 설정
+
+   export default function CPage() {
+       return <div>Welcome to Site C!</div>;
+   }
+   ```
+
+4. **이미지 최적화 및 캐싱 설정**
+   Next.js의 `next/image`를 사용하여 이미지 최적화를 구현합니다.
+
+   ```javascript
+   import Image from 'next/image';
+
+   export default function HomePage() {
+       return (
+           <div>
+               <h1>Welcome to Site A!</h1>
+               <Image
+                   src="/images/example.jpg"
+                   alt="Example"
+                   width={800}
+                   height={600}
+               />
+           </div>
+       );
+   }
+   ```
+   이미지 캐싱은 빌드 시 적용되며, Nginx나 CDN과 함께 최적화 가능합니다.
+
 ---
 
-## 2. 무중단 배포 (Zero-Downtime Deployment)
+## **2. Docker 환경 설정**
 
-### **설명**
-무중단 배포는 애플리케이션 업데이트 중에도 사용자가 중단 없이 서비스를 이용할 수 있도록 하는 배포 방식입니다. 대표적으로 Blue-Green, Canary, Rolling 배포 방식이 포함됩니다.
+### **2.1 Dockerfile 작성**
+프로젝트 루트에 `Dockerfile` 생성:
+```dockerfile
+# Base image
+FROM node:18 AS builder
 
-### **구현 방법**
-#### Blue-Green Deployment
-1. **AWS Elastic Beanstalk**에서 두 개의 환경(Blue, Green) 설정.
-2. 새 버전을 Green 환경에 배포 후, 테스트를 통해 안정성 검증.
-3. 트래픽을 Green 환경으로 전환.
+# 작업 디렉토리를 설정합니다.
+WORKDIR /app
 
-#### Canary Deployment
-1. **AWS CodeDeploy**를 통해 Canary 배포를 구성.
-2. 소수 사용자에게 새로운 버전 배포.
-3. 모니터링 및 테스트 후, 점진적으로 트래픽 확대.
+# 필요한 종속성을 설치합니다.
+COPY package.json yarn.lock ./
+RUN yarn install
 
-#### Rolling Deployment
-1. **AWS ECS**를 사용하여 클러스터 내 컨테이너를 점진적으로 업데이트.
-2. Auto Scaling 설정으로 배포 프로세스를 자동화.
+# 소스 코드를 복사하고 빌드를 수행합니다.
+COPY . ./
+RUN yarn build
 
-# React 프로젝트 배포 전략: Blue-Green, Canary, Rolling Deployment
+# Production stage
+FROM node:18 AS runner
 
-## **1. 배포 전략 개요**
+# 작업 디렉토리를 설정합니다.
+WORKDIR /app
 
-### **Blue-Green Deployment**
-- **특징**: 두 개의 환경(Blue, Green)을 번갈아 가며 트래픽을 전환하여 배포.
-- **목적**: 무중단 배포와 롤백 용이성 제공.
+# 빌드 결과물을 복사합니다.
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
 
-### **Canary Deployment**
-- **특징**: 새로운 버전을 일부 사용자에게 먼저 배포하고, 점진적으로 확대.
-- **목적**: 새로운 버전의 안정성을 검증하며 리스크 최소화.
+# 어플리케이션 포트를 노출합니다.
+EXPOSE 3000
 
-### **Rolling Deployment**
-- **특징**: 기존 서버의 버전을 점진적으로 교체하며 배포.
-- **목적**: 무중단 배포와 자원 효율성을 강조.
+# 애플리케이션 실행 명령어를 정의합니다.
+CMD ["yarn", "start"]
+```
+
+### **2.2 Docker Compose 작성**
+`docker-compose.yml` 파일:
+```yaml
+version: "3.8"
+services:
+  next-app:
+    build:
+      context: .
+      dockerfile: Dockerfile # Dockerfile의 경로를 지정합니다.
+    ports:
+      - "3000:3000" # 로컬과 컨테이너 포트를 매핑합니다.
+    environment:
+      NODE_ENV: production # 환경 변수를 정의합니다.
+```
 
 ---
 
-## **2. 사용 서비스 및 설정 순서**
+## **3. AWS ECR 및 ECS 설정 (AWS Console)**
 
-### **AWS 서비스**
-1. **Elastic Beanstalk**:
-   - Blue-Green Deployment를 지원하며, 환경 간 트래픽 전환이 간단.
-2. **CodeDeploy**:
-   - Canary 및 Rolling Deployment를 지원하며, 세분화된 배포 전략 설정 가능.
-3. **CodePipeline**:
-   - CI/CD 파이프라인으로 소스 코드 변경 시 자동으로 배포.
+### **3.1 AWS ECR 설정**
+1. AWS Management Console에서 **ECR (Elastic Container Registry)**로 이동합니다.
+2. **리포지토리 생성**을 클릭합니다.
+3. 리포지토리 이름에 `my-monolith-app`을 입력합니다.
+4. **프라이빗** 리포지토리로 설정하고 생성합니다.
+
+### **3.2 Docker 이미지 빌드 및 푸시**
+1. Docker 이미지를 빌드합니다:
+   ```bash
+   docker build -t my-monolith-app .
+   ```
+2. AWS ECR에서 푸시 명령어를 복사하여 실행합니다.
+   - 로그인 명령어 실행.
+   - 태그 지정 명령어 실행.
+   - Docker 이미지를 푸시합니다.
+
+### **3.3 ECS 클러스터 생성**
+1. AWS Management Console에서 **ECS**로 이동합니다.
+2. **클러스터 생성**을 클릭합니다.
+3. "클러스터 템플릿"에서 **EC2 Linux + Networking**을 선택합니다.
+4. 클러스터 이름을 `my-monolith-cluster`로 입력하고 생성합니다.
+
+### **3.4 태스크 정의 생성**
+1. ECS에서 **태스크 정의**로 이동합니다.
+2. **새 태스크 정의 생성** 버튼을 클릭합니다.
+3. "Fargate" 또는 "EC2"를 선택합니다.
+4. 다음을 입력:
+   - 태스크 정의 이름: `my-monolith-task`.
+   - 컨테이너 추가: 
+     - 이름: `my-monolith-app`.
+     - 이미지: `<account_id>.dkr.ecr.<region>.amazonaws.com/my-monolith-app:latest`.
+     - 포트 매핑: 컨테이너 포트 `3000`.
+5. 저장 후 태스크 정의를 등록합니다.
+
+### **3.5 서비스 생성**
+1. ECS에서 **서비스**로 이동합니다.
+2. **새 서비스 생성** 버튼을 클릭합니다.
+3. 다음을 입력:
+   - 클러스터 이름: `my-monolith-cluster`.
+   - 서비스 이름: `my-monolith-service`.
+   - 태스크 정의: `my-monolith-task`.
+   - 원하는 태스크 수: `1`.
+4. **다음**을 클릭하고 서비스 생성을 완료합니다.
 
 ---
 
-## **3. 설정 순서**
+## **4. Nginx를 사용한 정적 파일 및 이미지 캐싱**
 
-### **Blue-Green Deployment 설정**
+### **4.1 Nginx 설정 파일**
+`nginx.conf`
+```nginx
+server {
+    listen 80;
 
-1. **Elastic Beanstalk 애플리케이션 생성**:
-   - AWS 콘솔 → Elastic Beanstalk → **Create Application** 클릭.
-   - 애플리케이션 이름 입력: `ReactApp`.
-   - 플랫폼: **Node.js** 선택.
-   - 샘플 애플리케이션 배포 후 두 개의 환경(예: `Blue-env`, `Green-env`) 생성.
+    server_name example.com;
 
-2. **환경 설정 및 배포**:
-   - **Blue 환경**:
-     - Elastic Beanstalk → `Blue-env` 선택.
-     - `npm run build`로 빌드한 애플리케이션을 `.zip` 파일로 압축:
+    # Next.js 정적 파일을 캐싱합니다.
+    location /_next/static/ {
+        root /usr/share/nginx/html;
+        expires 1y; # 1년 동안 캐싱합니다.
+        add_header Cache-Control "public, max-age=31536000";
+    }
+
+    # 정적 HTML 파일 서빙
+    location /c {
+        root /usr/share/nginx/html;
+        index c.html; # C 페이지의 기본 파일
+    }
+
+    # 모든 기타 요청은 Next.js 서버로 전달
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+### **4.2 정적 파일 배포**
+1. Next.js 빌드 시 생성된 `.next/static` 디렉토리를 `/usr/share/nginx/html/_next/static/`로 복사.
+2. C 페이지의 HTML 파일을 `/usr/share/nginx/html/c.html`로 복사하여 서빙 가능하도록 설정.
+3. Nginx를 통해 캐싱된 정적 파일 및 HTML 서빙.
+
+> **질문 답변:**
+> 정적 파일과 C 페이지를 Nginx로 처리하도록 설정한 경우, Next.js 서버를 거치지 않고 Nginx가 직접 서빙합니다. 이를 위해 Nginx 설정에서 `/c` 경로와 `_next/static` 경로를 명확히 정의해야 합니다. Next.js를 거쳐도 캐싱된 파일을 사용할 수 있지만, 성능 최적화를 위해 Nginx가 직접 처리하는 것이 효율적입니다.
+
+---
+
+## **5. AWS CodePipeline으로 무중단 배포 설정**
+
+### **5.1 CodePipeline 구성 (콘솔)**
+1. **CodePipeline**으로 이동하여 **파이프라인 생성**을 클릭합니다.
+2. 다음을 입력:
+   - 파이프라인 이름: `my-monolith-pipeline`.
+   - 역할 생성: 자동으로 역할 생성.
+3. **소스 단계 구성**:
+   - 공급자: **CodeCommit**.
+   - 리포지토리 이름: `my-monolith-app`.
+   - 브랜치 이름: `main`.
+4. **빌드 단계 구성**:
+   - 공급자: **CodeBuild**.
+   - 프로젝트 생성: "새 CodeBuild 프로젝트".
+     - 이름: `my-monolith-build`.
+     - 환경: "관리형 이미지" 선택.
+     - 런타임: Node.js.
+     - 빌드 명령어:
        ```bash
-       zip -r build.zip ./build
+       npm install
+       npm run build
        ```
-     - Blue 환경에 `.zip` 파일 업로드.
-   - **Green 환경**:
-     - Elastic Beanstalk → **Create Environment** 클릭.
-     - 동일한 애플리케이션 `.zip` 파일을 Green 환경에 배포.
+5. **배포 단계 구성**:
+   - 공급자: **ECS**.
+   - 클러스터 이름: `my-monolith-cluster`.
+   - 서비스 이름: `my-monolith-service`.
+6. 모든 설정을 완료한 후 **파이프라인 생성**을 클릭합니다.
 
-3. **트래픽 전환**:
-   - Elastic Beanstalk → **환경(Environment)** → **Swap Environment URLs** 클릭.
-   - 트래픽을 Blue에서 Green으로 전환.
-
-#### **CodePipeline 설정 파일 (`buildspec.yml`)**
+### **5.2 CodePipeline 구성 파일**
+`buildspec.yml`
 ```yaml
 version: 0.2
-
 phases:
   install:
     runtime-versions:
-      nodejs: 16
+      nodejs: 18 # Node.js 18 버전을 사용합니다.
     commands:
-      - npm install
+      - echo Installing dependencies...
+      - npm install # 프로젝트의 의존성을 설치합니다.
   build:
     commands:
-      - npm run build
+      - echo Building the project...
+      - npm run build # Next.js 애플리케이션을 빌드합니다.
   post_build:
     commands:
-      - echo "Zipping the build folder..."
-      - zip -r build.zip ./build
-      - echo "Deploying to Elastic Beanstalk"
-      - aws elasticbeanstalk create-application-version --application-name ReactApp \
-          --version-label $CODEBUILD_RESOLVED_SOURCE_VERSION --source-bundle S3Bucket=my-bucket,S3Key=build.zip
-      - aws elasticbeanstalk update-environment --application-name ReactApp \
-          --environment-name Green-env --version-label $CODEBUILD_RESOLVED_SOURCE_VERSION
-```
-
----
-
-### **Canary Deployment 설정**
-
-1. **CodeDeploy 애플리케이션 생성**:
-   - AWS 콘솔 → CodeDeploy → **Applications** → **Create Application** 클릭.
-   - 애플리케이션 이름 입력: `ReactAppCanary`.
-   - 컴퓨팅 플랫폼: **EC2/On-premises** 선택.
-
-2. **Deployment Group 생성**:
-   - CodeDeploy → 애플리케이션 선택 → **Create Deployment Group** 클릭.
-   - 배포 그룹 이름: `CanaryGroup`.
-   - 서비스 역할 선택: `AWSCodeDeployRole`.
-   - 배포 유형: **Canary** 선택.
-     - 첫 배포: 10% 트래픽.
-     - 5분 후 90% 트래픽.
-
-3. **배포 구성**:
-   - CodeDeploy → **Create Deployment** 클릭.
-   - 배포 애플리케이션 및 배포 그룹 선택.
-   - 소스 버전 업로드.
-
-#### **CodePipeline 설정 파일 (`buildspec.yml`)**
-```yaml
-version: 0.2
-
-phases:
-  install:
-    runtime-versions:
-      nodejs: 16
-    commands:
-      - npm install
-  build:
-    commands:
-      - npm run build
-  post_build:
-    commands:
-      - echo "Zipping the build folder..."
-      - zip -r build.zip ./build
-      - echo "Deploying to CodeDeploy"
-      - aws deploy create-deployment --application-name ReactAppCanary \
-          --deployment-group-name CanaryGroup \
-          --revision file://build.zip \
-          --deployment-config-name CodeDeployDefault.Canary10Percent5Minutes
-```
-
----
-
-### **Rolling Deployment 설정**
-
-1. **CodeDeploy 애플리케이션 생성**:
-   - AWS 콘솔 → CodeDeploy → **Applications** → **Create Application** 클릭.
-   - 애플리케이션 이름 입력: `ReactAppRolling`.
-   - 컴퓨팅 플랫폼: **EC2/On-premises** 선택.
-
-2. **Deployment Group 생성**:
-   - CodeDeploy → 애플리케이션 선택 → **Create Deployment Group** 클릭.
-   - 배포 그룹 이름: `RollingGroup`.
-   - 서비스 역할 선택: `AWSCodeDeployRole`.
-   - 배포 유형: **Rolling** 설정.
-     - `CodeDeployDefault.OneAtATime` 구성 선택.
-
-3. **배포 구성**:
-   - CodeDeploy → **Create Deployment** 클릭.
-   - 배포 애플리케이션 및 배포 그룹 선택.
-   - 소스 버전 업로드.
-
-#### **CodePipeline 설정 파일 (`buildspec.yml`)**
-```yaml
-version: 0.2
-
-phases:
-  install:
-    runtime-versions:
-      nodejs: 16
-    commands:
-      - npm install
-  build:
-    commands:
-      - npm run build
-  post_build:
-    commands:
-      - echo "Zipping the build folder..."
-      - zip -r build.zip ./build
-      - echo "Deploying to CodeDeploy with Rolling Update"
-      - aws deploy create-deployment --application-name ReactAppRolling \
-          --deployment-group-name RollingGroup \
-          --revision file://build.zip \
-          --deployment-config-name CodeDeployDefault.OneAtATime
-```
-
----
-
-### **EC2 기반 구성과 React 프로젝트 세팅**
-
-1. **EC2 인스턴스 생성**:
-   - AWS 콘솔 → EC2 → **Launch Instance** 클릭.
-   - Amazon Linux 2 또는 Ubuntu 선택.
-   - 보안 그룹에서 HTTP(80)와 SSH(22) 포트를 열어줌.
-
-2. **Node.js 설치**:
-   - EC2에 SSH로 접속:
-     ```bash
-     ssh -i my-key.pem ec2-user@<EC2_PUBLIC_IP>
-     ```
-   - Node.js 설치:
-     ```bash
-     curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
-     sudo yum install -y nodejs
-     ```
-
-3. **React 프로젝트 배포**:
-   - 프로젝트 코드 클론:
-     ```bash
-     git clone https://github.com/your-repo.git
-     cd your-repo
-     ```
-   - 의존성 설치 및 빌드:
-     ```bash
-     npm install
-     npm run build
-     ```
-   - HTTP 서버 실행:
-     ```bash
-     npx serve -s build -l 80
-     ```
-
-4. **PM2로 프로세스 관리**:
-   - PM2 설치:
-     ```bash
-     sudo npm install -g pm2
-     ```
-   - React 애플리케이션 실행:
-     ```bash
-     pm2 start npx --name "react-app" -- serve -s build -l 80
-     pm2 save
-     ```
-
----
-
-## 3. 모놀리식 배포 (Monolithic Deployment)
-
-### **설명**
-모놀리식 배포는 프론트엔드와 백엔드를 단일 애플리케이션 패키지로 묶어 배포하는 방식입니다.
-
-### **구현 방법**
-1. **AWS EC2** 인스턴스를 생성하고 애플리케이션을 배포.
-2. **SSH**로 EC2에 접속하여 코드를 업로드.
-3. **NGINX**를 설치하여 정적 파일 서빙 및 백엔드 요청 프록시 처리.
-4. 애플리케이션 실행 및 상태 모니터링.
-
-# Monolithic Deployment: React 프론트엔드와 Express 백엔드
-
-## **1. Monolithic Deployment 개요**
-- **특징**: 프론트엔드와 백엔드가 하나의 애플리케이션으로 구성되어 단일 서버에서 실행 및 관리되는 배포 방식.
-- **구조**:
-  - 프론트엔드: React 애플리케이션 (폴더: `frontend`).
-  - 백엔드: Express.js 서버 (폴더: `backend`).
-  - NGINX를 사용하여 정적 파일과 API 요청을 분기 처리.
-- **장점**: 설정이 단순하며 초기 개발 및 배포가 빠름.
-- **단점**: 확장성과 유지보수에서 한계.
-
----
-
-## **2. 생성해야 할 리소스 및 AWS 서비스 설명**
-
-### **AWS EC2 (Elastic Compute Cloud)**
-- **역할**: React 프론트엔드와 Express 백엔드 서버를 실행.
-- **특징**:
-  - 인스턴스 내부에서 Node.js와 NGINX를 사용하여 애플리케이션 서빙.
-
-### **AWS S3 (Simple Storage Service)**
-- **역할**: 정적 파일(HTML, CSS, JS) 백업 및 저장소로 사용 가능.
-
-### **AWS IAM (Identity and Access Management)**
-- **역할**: EC2와 S3 접근 권한 관리.
-
-### **AWS CloudWatch**
-- **역할**: 애플리케이션 및 서버 모니터링.
-
----
-
-## **3. 설정 순서**
-
-### **1단계: 프로젝트 구조**
-
-```plaintext
-project-root/
-├── backend/           # Express.js 서버 코드
-│   ├── package.json
-│   ├── server.js
-│   └── routes/
-├── frontend/          # React 애플리케이션
-│   ├── package.json
-│   ├── public/
-│   ├── src/
-│   └── build/         # React 빌드 결과
-└── Dockerfile         # 전체 애플리케이션을 위한 Dockerfile
-```
-
-### **2단계: NGINX 설정**
-
-1. **NGINX 설치**:
-   - EC2에 접속 후 NGINX 설치:
-     ```bash
-     sudo yum update -y
-     sudo amazon-linux-extras enable nginx1
-     sudo yum install -y nginx
-     ```
-
-2. **NGINX 설정 파일 편집**:
-   - 설정 파일 위치: `/etc/nginx/conf.d/default.conf`.
-   - 내용:
-     ```nginx
-     server {
-         listen 80;
-
-         location / {
-             root /var/www/frontend;
-             index index.html;
-             try_files $uri /index.html;
-         }
-
-         location /api/ {
-             proxy_pass http://localhost:3000;
-             proxy_http_version 1.1;
-             proxy_set_header Upgrade $http_upgrade;
-             proxy_set_header Connection 'upgrade';
-             proxy_set_header Host $host;
-             proxy_cache_bypass $http_upgrade;
-         }
-     }
-     ```
-
-3. **정적 파일 및 서버 실행**:
-   - React 빌드 파일 복사:
-     ```bash
-     sudo mkdir -p /var/www/frontend
-     sudo cp -r /home/ec2-user/project-root/frontend/build/* /var/www/frontend/
-     ```
-   - NGINX 재시작:
-     ```bash
-     sudo systemctl restart nginx
-     ```
-
-### **3단계: Express 백엔드 구성**
-
-1. **백엔드 서버 설정**:
-   - `backend/server.js`:
-     ```javascript
-     const express = require('express');
-     const app = express();
-
-     // Serve static files from React build
-     app.use(express.static('../frontend/build'));
-
-     // API routes
-     app.get('/api/hello', (req, res) => {
-         res.json({ message: 'Hello from server!' });
-     });
-
-     // Catch-all handler for React routing
-     app.get('*', (req, res) => {
-         res.sendFile(require('path').join(__dirname, '../frontend/build', 'index.html'));
-     });
-
-     const PORT = process.env.PORT || 3000;
-     app.listen(PORT, () => {
-         console.log(`Server is running on port ${PORT}`);
-     });
-     ```
-
-2. **Express 실행**:
-   ```bash
-   cd backend
-   npm install
-   node server.js
-   ```
-
-3. **PM2로 Express 관리**:
-   ```bash
-   sudo npm install -g pm2
-   pm2 start backend/server.js --name "backend-server"
-   pm2 save
-   ```
-
----
-
-## **4. 코드 파이프라인 설정**
-
-### **1. CodePipeline 단계**
-1. **Source 단계**:
-   - GitHub 또는 CodeCommit을 소스 리포지토리로 사용.
-
-2. **Build 단계**:
-   - CodeBuild를 사용하여 React 애플리케이션 빌드 및 Express 백엔드 준비.
-
-3. **Deploy 단계**:
-   - EC2 인스턴스에 빌드 결과 배포.
-
-### **2. buildspec.yml 파일**
-```yaml
-version: 0.2
-
-phases:
-  install:
-    runtime-versions:
-      nodejs: 16
-    commands:
-      - echo "Installing dependencies..."
-      - cd frontend && npm install
-      - cd ../backend && npm install
-  build:
-    commands:
-      - echo "Building React app..."
-      - cd ../frontend && npm run build
-  post_build:
-    commands:
-      - echo "Packaging files..."
-      - zip -r deployment-package.zip frontend/build backend
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com # Amazon ECR에 로그인합니다.
+      - echo Tagging Docker image...
+      - docker build -t my-monolith-app . # Docker 이미지를 빌드합니다.
+      - docker tag my-monolith-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app:latest # 빌드된 이미지를 태그합니다.
+      - echo Pushing Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app:latest # 이미지를 Amazon ECR로 푸시합니다.
+      - echo Updating ECS Service...
+      - aws ecs update-service --cluster my-monolith-cluster --service my-monolith-service --force-new-deployment # ECS 서비스에 새 배포를 트리거합니다.
 artifacts:
   files:
-    - deployment-package.zip
-```
-
-### **3. 배포 스크립트**
-- EC2에서 실행할 배포 스크립트 예시:
-```bash
-#!/bin/bash
-# Extract deployment package
-unzip deployment-package.zip -d /home/ec2-user/project-root
-
-# Move frontend build to NGINX directory
-sudo cp -r /home/ec2-user/project-root/frontend/build/* /var/www/frontend/
-
-# Restart backend server with PM2
-pm2 restart backend-server
+    - '**/*' # 빌드 아티팩트를 정의합니다.
 ```
 
 ---
 
-## **5. 추가적인 구성 및 유지 관리**
+## **6. 결론 및 최적화**
 
-### **자동화된 시작 스크립트 (User Data)**
-- EC2 생성 시 초기 설정 자동화:
-  ```bash
-  #!/bin/bash
-  yum update -y
-  amazon-linux-extras enable nginx1
-  yum install -y nginx git nodejs
-  systemctl start nginx
+1. **정적 및 동적 요청 분리**:
+   - 정적 파일은 Nginx 또는 CDN으로 처리하여 서버 부하를 줄임.
+   - 동적 요청(API, SSR 등)은 Next.js 서버에서 처리.
 
-  git clone https://github.com/your-repo.git /home/ec2-user/project-root
-  cd /home/ec2-user/project-root
+2. **이미지 최적화**:
+   - Next.js `next/image`와 Nginx/CloudFront를 조합해 글로벌 이미지 캐싱.
 
-  cd frontend
-  npm install
-  npm run build
-  sudo cp -r build/* /var/www/frontend/
+3. **무중단 배포**:
+   - AWS CodePipeline과 ECS를 활용해 새로운 배포가 기존 서비스에 영향을 주지 않도록 구현.
 
-  cd ../backend
-  npm install
-  pm2 start server.js --name "backend-server"
-  pm2 save
-  ```
+4. **모놀리식 유지보수**:
+   - 사이트별로 코드를 명확히 분리하여 관리.
+   - 도커 기반으로 배포하여 CI/CD를 쉽게 구성.
 
----
 
-## 4. CI/CD 파이프라인을 통한 자동화 배포
-
-### **설명**
-CI/CD 파이프라인은 코드 변경 사항을 자동으로 통합, 테스트, 배포하는 자동화된 워크플로를 제공합니다.
-
-### **구현 방법**
-1. **AWS CodePipeline** 설정:
-   - **Source**: GitHub, CodeCommit 등에서 코드 가져오기.
-   - **Build**: CodeBuild를 사용해 빌드.
-   - **Deploy**: S3, ECS, 또는 Elastic Beanstalk로 배포.
-2. **빌드 실패/성공 알림**: AWS SNS를 사용하여 개발자에게 알림 전송.
-3. **환경별 파이프라인 구성**: 개발, 스테이징, 프로덕션 환경으로 구분.
 
 # CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포
 
@@ -847,111 +613,9 @@ CI/CD 파이프라인을 통해 React 프로젝트를 자동으로 빌드, 테�
 - **역할**: AWS 리소스 접근을 제어.
 - **특징**:
   - CodePipeline, CodeBuild, S3 간 권한을 설정.
-
 ---
 
-## **3. CI/CD 파이프라인 설정 순서**
-
-### **3.1 S3 버킷 생성 및 설정**
-1. AWS 콘솔 → **S3** → **Create Bucket**:
-   - 버킷 이름: `react-project-artifacts` (빌드 결과 저장용).
-   - 퍼블릭 액세스 비활성화.
-
-2. **정적 웹 호스팅 활성화**:
-   - S3 버킷 → **Properties** → **Static Website Hosting**.
-   - Index Document: `index.html`.
-
-### **3.2 IAM 역할 생성**
-1. AWS 콘솔 → **IAM** → **Roles** → **Create Role**:
-   - 서비스: **CodePipeline** 선택.
-   - 정책 연결:
-     - **AmazonS3FullAccess**.
-     - **AWSCodeBuildAdminAccess**.
-
-2. 동일한 방식으로 **CodeBuild** 전용 역할 생성.
-
-### **3.3 CodeBuild 프로젝트 생성**
-1. AWS 콘솔 → **CodeBuild** → **Create Build Project**:
-   - **Source**: CodePipeline (Source를 직접 받음).
-   - **Environment**:
-     - 런타임: **Node.js**.
-     - 운영 체제: Amazon Linux 2.
-     - 권한: 생성한 CodeBuild IAM 역할.
-   - **Buildspec**:
-     - `buildspec.yml` 파일 사용.
-
-### **3.4 CloudFront 배포 설정**
-1. AWS 콘솔 → **CloudFront** → **Create Distribution**:
-   - Origin: S3 버킷(`react-project-artifacts`).
-   - Default Cache Behavior:
-     - Viewer Protocol Policy: Redirect HTTP to HTTPS.
-   - 배포 완료 후 URL 확인.
-
-### **3.5 CodePipeline 생성**
-1. AWS 콘솔 → **CodePipeline** → **Create Pipeline**:
-   - **Source**: GitHub 또는 CodeCommit.
-   - **Build**: CodeBuild 프로젝트 연결.
-   - **Deploy**: S3 버킷에 React 빌드 결과 저장.
-
----
-
-## **4. `buildspec.yml` 작성 방법**
-
-### **4.1 파일 내용**
-```yaml
-version: 0.2
-
-phases:
-  install:
-    runtime-versions:
-      nodejs: 16
-    commands:
-      - echo "Installing dependencies..."
-      - npm install
-  build:
-    commands:
-      - echo "Building the project..."
-      - npm run build
-  post_build:
-    commands:
-      - echo "Syncing build output to S3..."
-      - aws s3 sync ./build s3://react-project-artifacts --delete
-artifacts:
-  files:
-    - '**/*'
-cache:
-  paths:
-    - node_modules/**/*
-```
-
-### **4.2 옵션 설명**
-1. **`version`**:
-   - Buildspec 파일의 형식 버전을 나타냄.
-
-2. **`phases`**:
-   - **`install`**: 빌드에 필요한 환경과 의존성 설치.
-   - **`build`**: React 애플리케이션 빌드 실행.
-   - **`post_build`**: 빌드 후 결과를 S3에 동기화.
-
-3. **`artifacts`**:
-   - 생성된 빌드 결과를 파이프라인에서 사용할 수 있도록 설정.
-
-4. **`cache`**:
-   - 의존성을 캐싱하여 빌드 속도를 최적화.
-
----
-
-## **5. 결과 확인**
-1. **S3 및 CloudFront URL 확인**:
-   - CloudFront 도메인에서 애플리케이션 배포 확인.
-2. **CodePipeline 자동화 테스트**:
-   - GitHub에서 소스 변경 후 CodePipeline이 실행되는지 확인.
-
-이 설정을 통해 React 프로젝트의 빌드, 테스트, 배포를 완전 자동화할 수 있습니다. 추가 질문이 있다면 알려주세요!
-
----
-
-## 5. A/B 테스트 배포
+## A/B 테스트 배포
 
 ### **설명**
 A/B 테스트 배포는 사용자 그룹을 나누어 서로 다른 애플리케이션 버전을 제공하여 최적의 사용자 경험을 찾는 방식입니다.
