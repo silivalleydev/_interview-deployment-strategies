@@ -153,17 +153,27 @@ CDN 배포는 정적 파일(HTML, CSS, JS)을 전 세계 엣지 서버에 분산
 
 3. **버킷 정책 추가**:
    ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Effect": "Allow",
-         "Principal": "*",
-         "Action": "s3:GetObject",
-         "Resource": "arn:aws:s3:::my-frontend-app/*"
-       }
-     ]
-   }
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:ListBucket",
+                "Resource": "arn:aws:s3:::sili-cdn-deployment"
+            },
+            {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject"
+                ],
+                "Resource": "arn:aws:s3:::sili-cdn-deployment/*"
+            }
+        ]
+    }
    ```
 
 4. **빌드 결과 업로드**:
@@ -190,6 +200,29 @@ CDN 배포는 정적 파일(HTML, CSS, JS)을 전 세계 엣지 서버에 분산
      - **AWSCodePipelineFullAccess**
      - **AWSCodeBuildAdminAccess**
      - **AmazonS3FullAccess**
+   - role 신뢰관계에 아래내용추가
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "arn:aws:iam::514278804051:root"
+                },
+                "Action": "sts:AssumeRole",
+                "Condition": {}
+            },
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "codepipeline.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+            }
+        ]
+    }
+    ```
 
 2. **CodePipeline 생성**:
    - AWS 콘솔 → CodePipeline → 새 파이프라인 생성.
