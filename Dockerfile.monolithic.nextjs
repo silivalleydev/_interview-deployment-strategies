@@ -5,11 +5,12 @@ FROM node:18 AS builder
 WORKDIR /app
 
 # 필요한 종속성을 설치합니다.
-COPY package.json yarn.lock ./
+COPY next-frontend/package.json next-frontend/yarn.lock ./
 RUN yarn install
 
 # 소스 코드를 복사하고 빌드를 수행합니다.
-COPY . ./
+COPY next-frontend ./next-frontend
+WORKDIR /app/next-frontend
 RUN yarn build
 
 # Production stage
@@ -19,7 +20,7 @@ FROM node:18 AS runner
 WORKDIR /app
 
 # 빌드 결과물을 복사합니다.
-COPY --from=builder /app .
+COPY --from=builder /app/next-frontend ./
 
 # 어플리케이션 포트를 노출합니다.
 EXPOSE 3000
