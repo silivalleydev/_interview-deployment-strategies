@@ -1,0 +1,28 @@
+# Base image
+FROM node:18 AS builder
+
+# 작업 디렉토리를 설정합니다.
+WORKDIR /app
+
+# 필요한 종속성을 설치합니다.
+COPY package.json yarn.lock ./
+RUN yarn install
+
+# 소스 코드를 복사하고 빌드를 수행합니다.
+COPY . ./
+RUN yarn build
+
+# Production stage
+FROM node:18 AS runner
+
+# 작업 디렉토리를 설정합니다.
+WORKDIR /app
+
+# 빌드 결과물을 복사합니다.
+COPY --from=builder /app .
+
+# 어플리케이션 포트를 노출합니다.
+EXPOSE 3000
+
+# 애플리케이션 실행 명령어를 정의합니다.
+CMD ["yarn", "start"]

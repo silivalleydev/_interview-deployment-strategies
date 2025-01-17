@@ -26,13 +26,13 @@
     - [**1.1 프로젝트 설정**](#11-프로젝트-설정)
   - [**2. Docker 환경 설정**](#2-docker-환경-설정)
     - [**2.1 Next.js 서버용 Dockerfile 작성**](#21-nextjs-서버용-dockerfile-작성)
-    - [**2.2 Nginx용 Dockerfile 작성**](#22-nginx용-dockerfile-작성)
+    - [**2.2 Nginx 서버용 Dockerfile 작성**](#22-nginx-서버용-dockerfile-작성)
     - [**2.3 Docker Compose 작성**](#23-docker-compose-작성)
   - [**3. Nginx 설정 파일 작성**](#3-nginx-설정-파일-작성)
   - [**4. AWS CodePipeline으로 무중단 배포 설정**](#4-aws-codepipeline으로-무중단-배포-설정)
     - [**4.1 CodePipeline 구성 파일 작성**](#41-codepipeline-구성-파일-작성)
-    - [**4.2 ECS 서비스 구성**](#42-ecs-서비스-구성)
-  - [**5. 결론 및 최적화**](#5-결론-및-최적화)
+    - [**4.2 AWS Management Console에서 ECS 서비스 구성**](#42-aws-management-console에서-ecs-서비스-구성)
+  - [**5. 최종 결과**](#5-최종-결과)
 - [CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포](#cicd-파이프라인을-통한-react-프로젝트-자동화-배포)
   - [**1. CI와 CD의 의미**](#1-ci와-cd의-의미)
     - [**1.1 CI (Continuous Integration)**](#11-ci-continuous-integration)
@@ -279,12 +279,15 @@ cache:
 ## **1. 개발 및 구현 순서**
 
 ### **1.1 프로젝트 설정**
+
 1. **Next.js 설치 및 초기화**
-   - AWS Management Console에서 CodeCommit으로 이동합니다.
+
+   - AWS Management Console에서 **CodeCommit**으로 이동합니다.
    - "리포지토리 생성" 버튼을 클릭합니다.
    - 리포지토리 이름으로 `my-monolith-app`을 입력하고 생성합니다.
 
 2. **폴더 구조 설정**
+
    ```
    /app/
      - /a/ (사이트 A 페이지)
@@ -292,10 +295,13 @@ cache:
      - /c/ (사이트 C 페이지, 정적 사이트)
      - /shared/ (공용 컴포넌트 및 유틸리티)
    ```
+
    **App Router 사용 시** 각 사이트를 `/app/{site}` 디렉토리에 배치합니다.
 
 3. **정적 사이트 페이지 (`/c`) 구성**
+
    `app/c/page.js`
+
    ```javascript
    export const dynamic = 'force-static'; // 정적 페이지로 강제 설정
 
@@ -305,6 +311,7 @@ cache:
    ```
 
 4. **이미지 최적화 및 캐싱 설정**
+
    Next.js의 `next/image`를 사용하여 이미지 최적화를 구현합니다.
 
    ```javascript
@@ -324,6 +331,7 @@ cache:
        );
    }
    ```
+
    이미지 캐싱은 빌드 시 적용되며, Nginx나 CDN과 함께 최적화 가능합니다.
 
 ---
@@ -331,7 +339,9 @@ cache:
 ## **2. Docker 환경 설정**
 
 ### **2.1 Next.js 서버용 Dockerfile 작성**
+
 프로젝트 루트에 `Dockerfile.nextjs` 생성:
+
 ```dockerfile
 # Base image
 FROM node:18 AS builder
@@ -363,8 +373,10 @@ EXPOSE 3000
 CMD ["yarn", "start"]
 ```
 
-### **2.2 Nginx용 Dockerfile 작성**
+### **2.2 Nginx 서버용 Dockerfile 작성**
+
 프로젝트 루트에 `Dockerfile.nginx` 생성:
+
 ```dockerfile
 # Base Nginx image
 FROM nginx:alpine
@@ -373,14 +385,16 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # 정적 파일 복사
-COPY out /usr/share/nginx/html
+COPY ./out /usr/share/nginx/html
 
 # Nginx 포트 노출
 EXPOSE 80
 ```
 
 ### **2.3 Docker Compose 작성**
+
 `docker-compose.yml` 파일:
+
 ```yaml
 version: "3.8"
 services:
@@ -406,7 +420,9 @@ services:
 ---
 
 ## **3. Nginx 설정 파일 작성**
+
 `nginx.conf`
+
 ```nginx
 server {
     listen 80;
@@ -444,7 +460,9 @@ server {
 ## **4. AWS CodePipeline으로 무중단 배포 설정**
 
 ### **4.1 CodePipeline 구성 파일 작성**
+
 `buildspec.yml`
+
 ```yaml
 version: 0.2
 phases:
@@ -471,39 +489,63 @@ phases:
       - docker build -f Dockerfile.nginx -t my-monolith-app-nginx .
       - docker tag my-monolith-app-nginx:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app-nginx:latest
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/my-monolith-app-nginx:latest
-      - echo Updating ECS services...
+      - echo Updating Next.js ECS service...
       - aws ecs update-service --cluster my-monolith-cluster --service my-monolith-service-nextjs --force-new-deployment
+      - echo Updating Nginx ECS service...
       - aws ecs update-service --cluster my-monolith-cluster --service my-monolith-service-nginx --force-new-deployment
 artifacts:
   files:
     - '**/*'
 ```
 
-### **4.2 ECS 서비스 구성**
-1. **Next.js 서비스**:
-   - 컨테이너 이름: `my-monolith-app-nextjs`.
-   - 포트 매핑: `3000`.
-2. **Nginx 서비스**:
-   - 컨테이너 이름: `my-monolith-app-nginx`.
-   - 포트 매핑: `80`.
+### **4.2 AWS Management Console에서 ECS 서비스 구성**
+
+1. **Elastic Container Service(ECS)**로 이동합니다.
+
+2. **클러스터 생성**:
+
+   - "클러스터 생성"을 클릭.
+   - 클러스터 이름: `my-monolith-cluster`.
+   - 네트워크: VPC 및 서브넷 선택.
+
+3. **서비스 생성**:
+
+   - "서비스 생성"을 클릭.
+   - 서비스 유형: Fargate.
+   - 서비스 이름: `my-monolith-service-nextjs` 및 `my-monolith-service-nginx` 각각 생성.
+   - 태스크 정의: Next.js와 Nginx 각각에 대해 태스크 정의 연결.
+   - 포트 매핑: `3000`(Next.js), `80`(Nginx).
+
+4. **ALB(Application Load Balancer) 연결 설정**:
+
+   - AWS Management Console에서 **EC2 > Load Balancers**로 이동.
+   - "로드 밸런서 생성"을 클릭.
+   - 유형: Application Load Balancer.
+   - 리스너:
+     - 포트 80 (HTTP) 추가.
+     - 필요 시 HTTPS 리스너 추가(SSL 인증서 필요).
+   - 대상 그룹 생성:
+     - "대상 그룹 생성" 버튼을 클릭.
+     - 대상 유형: IP.
+     - 포트: `80` (Nginx 컨테이너 대상).
+     - ECS 서비스와 연결.
+   - ALB와 ECS 서비스를 연결:
+     - "서비스 생성" 단계에서 **로드 밸런싱 활성화**를 체크.
+     - 생성한 ALB 및 대상 그룹 선택.
+
+5. **CodePipeline에서 Docker Compose 대신 개별 빌드 관리**:
+
+   - CodePipeline에서 Next.js와 Nginx 이미지를 각각 빌드하고 ECR로 푸시합니다.
+   - Compose는 로컬 개발용으로 사용되며, 배포는 독립적 이미지를 기반으로 관리합니다.
+   - 각 ECS 서비스는 개별 이미지 업데이트를 통해 효율적으로 관리됩니다.
 
 ---
 
-## **5. 결론 및 최적화**
+## **5. 최종 결과**
 
-1. **정적 및 동적 요청 분리**:
-   - 정적 파일은 Nginx에서 처리하여 서버 부하를 줄임.
-   - 동적 요청은 Next.js 서버에서 처리.
-
-2. **이미지 최적화**:
-   - Next.js `next/image`와 Nginx/CloudFront를 조합해 글로벌 이미지 캐싱.
-
-3. **무중단 배포**:
-   - CodePipeline과 ECS를 활용해 새로운 배포가 기존 서비스에 영향을 주지 않도록 구현.
-
-4. **구조적 유지보수**:
-   - Nginx와 Next.js 서버를 분리하여 관리.
-   - 도커 기반으로 CI/CD를 쉽게 구성.
+- AWS ECS에서 Nginx와 Next.js 서비스가 독립적으로 실행됩니다.
+- CodePipeline을 통해 CI/CD 파이프라인이 설정되어 자동 배포됩니다.
+- ALB를 통해 외부 요청이 Nginx로 전달되고, Nginx가 Next.js로 요청을 프록시합니다.
 
 
 # CI/CD 파이프라인을 통한 React 프로젝트 자동화 배포
